@@ -17,6 +17,8 @@ from glob import glob
 import h5py
 import imageio
 import mujoco
+import torch
+import random
 import numpy as np
 import robosuite
 
@@ -29,6 +31,14 @@ import robocasa
 import robocasa.macros as macros
 from robocasa.models.fixtures import FixtureType
 from robocasa.utils.robomimic.robomimic_dataset_utils import convert_to_robomimic_format
+
+
+def control_seed(seed):
+    random.seed(seed)
+    np.random.seed(seed)
+    torch.manual_seed(seed)
+    torch.cuda.manual_seed_all(seed)
+    torch.backends.cudnn.deterministic = True
 
 
 def is_empty_input_spacemouse(action_dict):
@@ -106,6 +116,7 @@ def collect_human_trajectory(
 
     discard_traj = False
 
+    success = False
     # Loop until we get a reset from the input or the task completes
     while True:
         start = time.time()
@@ -116,6 +127,9 @@ def collect_human_trajectory(
 
         # Get the newest action
         input_ac_dict = device.input2action(mirror_actions=mirror_actions)
+        if "base_mode" not in input_ac_dict:
+            input_ac_dict["base_mode"] = -1
+            input_ac_dict["base"] = np.zeros(3)
 
         # If action is none, then this a reset so we should break
         if input_ac_dict is None:
@@ -157,6 +171,7 @@ def collect_human_trajectory(
 
         # Also break if we complete the task
         if task_completion_hold_count == 0:
+            success = True
             break
 
         # state machine to check for having a success for 10 consecutive timesteps
@@ -187,6 +202,7 @@ def collect_human_trajectory(
     # cleanup for end of data collection episodes
     env.close()
 
+    discard_traj = discard_traj or not success
     return ep_directory, discard_traj
 
 
@@ -232,6 +248,7 @@ def gather_demonstrations_as_hdf5(directory, out_dir, env_info, excluded_episode
         state_paths = os.path.join(directory, ep_directory, "state_*.npz")
         states = []
         actions = []
+        obs = []
         actions_abs = []
         # success = False
 
@@ -240,6 +257,7 @@ def gather_demonstrations_as_hdf5(directory, out_dir, env_info, excluded_episode
             env_name = str(dic["env"])
 
             states.extend(dic["states"])
+            obs.extend(dic["obs"])
             for ai in dic["action_infos"]:
                 actions.append(ai["actions"])
                 if "actions_abs" in ai:
@@ -257,7 +275,9 @@ def gather_demonstrations_as_hdf5(directory, out_dir, env_info, excluded_episode
         # recorded the states and actions, the states were recorded AFTER playing that action,
         # so we end up with an extra state at the end.
         del states[-1]
+        del obs[-1]
         assert len(states) == len(actions)
+        assert len(obs) == len(actions)
 
         num_eps += 1
         ep_data_grp = grp.create_group("demo_{}".format(num_eps))
@@ -281,6 +301,10 @@ def gather_demonstrations_as_hdf5(directory, out_dir, env_info, excluded_episode
         if len(actions_abs) > 0:
             print(np.array(actions_abs).shape)
             ep_data_grp.create_dataset("actions_abs", data=np.array(actions_abs))
+        # write observations. Observations is dictionary of numpy arrays
+        obs_grp = ep_data_grp.create_group("observations")
+        for key, value in obs[0].items():
+            obs_grp.create_dataset(key, data=np.array([o[key] for o in obs]))
 
         # else:
         #     pass
@@ -316,11 +340,15 @@ if __name__ == "__main__":
         default=os.path.join(robocasa.models.assets_root, "demonstrations_private"),
     )
     parser.add_argument("--environment", type=str, default="Kitchen")
+    parser.add_argument("--seed", "-s", type=int, default=0)
+    parser.add_argument(
+        "--n_demos", type=int, default=50, help="Number of demonstrations to collect"
+    )
     parser.add_argument(
         "--robots",
         nargs="+",
         type=str,
-        default="PandaOmron",
+        default="Demo",
         help="Which robot(s) to use in the env",
     )
     parser.add_argument(
@@ -346,7 +374,7 @@ if __name__ == "__main__":
     parser.add_argument(
         "--camera",
         type=str,
-        default=None,
+        default="free",
         help="Which camera to use for collecting demos",
     )
     parser.add_argument(
@@ -364,13 +392,13 @@ if __name__ == "__main__":
     parser.add_argument(
         "--pos-sensitivity",
         type=float,
-        default=4.0,
+        default=1.0,
         help="How much to scale position user inputs",
     )
     parser.add_argument(
         "--rot-sensitivity",
         type=float,
-        default=4.0,
+        default=1.0,
         help="How much to scale rotation user inputs",
     )
 
@@ -389,6 +417,7 @@ if __name__ == "__main__":
     parser.add_argument("--generative_textures", action="store_true")
     args = parser.parse_args()
 
+    control_seed(args.seed)
     # Get controller config
     # controller_config = load_controller_config(default_controller=args.controller)
     controller_config = load_composite_controller_config(
@@ -401,6 +430,8 @@ if __name__ == "__main__":
         from robosuite.examples.third_party_controller.mink_controller import (
             WholeBodyMinkIK,
         )
+    controller_config["body_parts"]["right"]["input_type"] = "absolute"
+    controller_config["body_parts"]["right"]["input_ref_frame"] = "world"
 
     env_name = args.environment
 
@@ -460,6 +491,7 @@ if __name__ == "__main__":
         use_camera_obs=False,
         control_freq=20,
         renderer=args.renderer,
+        seed=args.seed,
     )
 
     # Wrap this with visualization wrapper
@@ -492,8 +524,8 @@ if __name__ == "__main__":
             env=env,
             pos_sensitivity=args.pos_sensitivity,
             rot_sensitivity=args.rot_sensitivity,
-            vendor_id=macros.SPACEMOUSE_VENDOR_ID,
-            product_id=macros.SPACEMOUSE_PRODUCT_ID,
+            # vendor_id=macros.SPACEMOUSE_VENDOR_ID,
+            # product_id=macros.SPACEMOUSE_PRODUCT_ID,
         )
     else:
         raise ValueError
@@ -505,6 +537,7 @@ if __name__ == "__main__":
     excluded_eps = []
 
     # collect demonstrations
+    valid_demos = 0
     while True:
         print()
         ep_directory, discard_traj = collect_human_trajectory(
@@ -518,7 +551,8 @@ if __name__ == "__main__":
         )
 
         print("Keep traj?", not discard_traj)
-
+        if not discard_traj:
+            valid_demos += 1
         if not args.debug:
             if discard_traj and ep_directory is not None:
                 excluded_eps.append(ep_directory.split("/")[-1])
@@ -526,3 +560,5 @@ if __name__ == "__main__":
                 tmp_directory, new_dir, env_info, excluded_episodes=excluded_eps
             )
             convert_to_robomimic_format(hdf5_path)
+        if valid_demos >= args.n_demos:
+            break
