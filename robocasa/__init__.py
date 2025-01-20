@@ -273,6 +273,7 @@ from robocasa.environments.kitchen.single_stage.kitchen_navigate import Navigate
 from robocasa.environments.kitchen.single_stage.kitchen_pnp import (
     PnPCabToCounter,
     PnPCounterToCab,
+    PnPCounterToCabEasy,
     PnPCounterToMicrowave,
     PnPCounterToSink,
     PnPMicrowaveToCounter,

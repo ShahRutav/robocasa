@@ -19,6 +19,7 @@ from robosuite.environments.base import EnvMeta
 from scipy.spatial.transform import Rotation
 
 from robosuite.models.robots import PandaOmron
+from robosuite.utils.control_utils import convert_delta_to_abs_action
 
 import robocasa
 import robocasa.macros as macros
@@ -69,6 +70,7 @@ _ROBOT_POS_OFFSETS: dict[str, list[float]] = {
     "G1FixedLowerBody": [0, -0.33, 0],
     "GoogleRobot": [0, 0, 0],
     "Demo": [0, 0, 0.97],
+    "DemoTwoFingered": [0, 0, 0.97],
 }
 
 
@@ -496,6 +498,9 @@ class Kitchen(ManipulationEnv, metaclass=KitchenEnvMeta):
             for obj_num, cfg in enumerate(self.object_cfgs):
                 if "name" not in cfg:
                     cfg["name"] = "obj_{}".format(obj_num + 1)
+                # if cfg["name"] == "obj":
+                #     cfg["placement"]["size"] = (0.1, 0.1)
+                #     self.object_cfgs[obj_num]["placement"]["size"] = cfg["placement"]["size"]
                 model, info = self._create_obj(cfg)
                 cfg["info"] = info
                 self.objects[model.name] = model
@@ -701,6 +706,7 @@ class Kitchen(ManipulationEnv, metaclass=KitchenEnvMeta):
         placement_initializer = SequentialCompositeSampler(
             name="SceneSampler", rng=self.rng
         )
+        # print("*"*20)
 
         for (obj_i, cfg) in enumerate(cfg_list):
             # determine which object is being placed
@@ -854,6 +860,7 @@ class Kitchen(ManipulationEnv, metaclass=KitchenEnvMeta):
                 site_tree = ET.fromstring(site_str)
                 self.model.worldbody.append(site_tree)
 
+            # print(f"obj: {cfg['name']}, x_range: {x_range}, y_range: {y_range}")
             placement_initializer.append_sampler(
                 sampler=UniformRandomSampler(
                     name="{}_Sampler".format(cfg["name"]),
@@ -898,6 +905,13 @@ class Kitchen(ManipulationEnv, metaclass=KitchenEnvMeta):
 
         # step through a few timesteps to settle objects
         action = np.zeros(self.action_spec[0].shape)  # apply empty action
+        for robot in self.robots:
+            for arm in robot.arms:
+                if robot.part_controllers[arm].input_type == "absolute":
+                    assert (
+                        len(self.robots) == 1
+                    ), "Only one robot is supported for now. It can be easily extended."
+                    action = convert_delta_to_abs_action(action, robot, arm, self)
 
         # Since the env.step frequency is slower than the mjsim timestep frequency, the internal controller will output
         # multiple torque commands in between new high level action commands. Therefore, we need to denote via
@@ -1372,10 +1386,13 @@ class Kitchen(ManipulationEnv, metaclass=KitchenEnvMeta):
 
         for name in visual_geom_names:
             rgba = self.sim.model.geom_rgba[self.sim.model.geom_name2id(name)]
-            if self.translucent_robot:
-                rgba[-1] = 0.10
+            if isinstance(self.translucent_robot, bool):
+                if self.translucent_robot:
+                    rgba[-1] = 0.05
+                else:
+                    rgba[-1] = 1.0
             else:
-                rgba[-1] = 1.0
+                rgba[-1] = self.translucent_robot
 
     def reward(self, action=None):
         """

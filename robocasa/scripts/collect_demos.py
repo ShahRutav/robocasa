@@ -12,6 +12,7 @@ import datetime
 import json
 import os
 import time
+import pickle
 from glob import glob
 
 import h5py
@@ -20,12 +21,13 @@ import mujoco
 import torch
 import random
 import numpy as np
-import robosuite
+from termcolor import colored
 
 # from robosuite import load_controller_config
+import robosuite
 from robosuite.controllers import load_composite_controller_config
 from robosuite.wrappers import DataCollectionWrapper, VisualizationWrapper
-from termcolor import colored
+from robosuite.utils.control_utils import convert_delta_to_abs_action
 
 import robocasa
 import robocasa.macros as macros
@@ -60,6 +62,7 @@ def collect_human_trajectory(
     render=True,
     max_fr=None,
     print_info=True,
+    env_name=None,
 ):
     """
     Use the device (keyboard or SpaceNav 3D mouse) to collect a demonstration.
@@ -73,11 +76,25 @@ def collect_human_trajectory(
         env_configuration (str): specified environment configuration
     """
 
+    ep_meta = None
+    ep_meta_file_name = f"scene_configs/ep_meta_{env_name}.pkl"
+    load_from_pickle = True
+
+    if (load_from_pickle) and (env_name != "Lift"):
+        ep_meta = pickle.load(open(ep_meta_file_name, "rb"))
+        env.set_ep_meta(ep_meta)
+
     env.reset()
 
-    ep_meta = env.get_ep_meta()
+    if (not load_from_pickle) and (env_name != "Lift"):
+        ep_meta = env.get_ep_meta()
+        pickle.dump(ep_meta, open(ep_meta_file_name, "wb"))
+    print("ep_meta", ep_meta)
+
     # print(json.dumps(ep_meta, indent=4))
-    lang = ep_meta.get("lang", None)
+    lang = None
+    if ep_meta is not None:
+        lang = ep_meta.get("lang", None)
     if print_info and lang is not None:
         print(colored(f"Instruction: {lang}", "green"))
 
@@ -107,6 +124,10 @@ def collect_human_trajectory(
     ]
 
     zero_action = np.zeros(env.action_dim)
+    # controller has absolute actions, so we need to set the initial action to be the current position
+    active_robot = env.robots[device.active_robot]
+    if active_robot.part_controllers[arm].input_type == "absolute":
+        zero_action = convert_delta_to_abs_action(zero_action, active_robot, arm, env)
     for _ in range(1):
         # do a dummy step thru base env to initalize things, but don't record the step
         if isinstance(env, DataCollectionWrapper):
@@ -127,14 +148,15 @@ def collect_human_trajectory(
 
         # Get the newest action
         input_ac_dict = device.input2action(mirror_actions=mirror_actions)
-        if "base_mode" not in input_ac_dict:
-            input_ac_dict["base_mode"] = -1
-            input_ac_dict["base"] = np.zeros(3)
 
         # If action is none, then this a reset so we should break
         if input_ac_dict is None:
             discard_traj = True
             break
+
+        if "base_mode" not in input_ac_dict:
+            input_ac_dict["base_mode"] = -1
+            input_ac_dict["base"] = np.zeros(3)
 
         action_dict = deepcopy(input_ac_dict)
 
@@ -250,6 +272,10 @@ def gather_demonstrations_as_hdf5(directory, out_dir, env_info, excluded_episode
         actions = []
         obs = []
         actions_abs = []
+        initial_obj_qpos = {}
+        initial_qpos = None
+        non_robot_qpos_idx = []
+        index = 0
         # success = False
 
         for state_file in sorted(glob(state_paths)):
@@ -262,6 +288,10 @@ def gather_demonstrations_as_hdf5(directory, out_dir, env_info, excluded_episode
                 actions.append(ai["actions"])
                 if "actions_abs" in ai:
                     actions_abs.append(ai["actions_abs"])
+            if index == 0:
+                initial_qpos = dic["initial_qpos"]
+                initial_obj_qpos = dic["initial_obj_qpos"]
+                non_robot_qpos_idx = dic["non_robot_qpos_idx"]
             # success = success or dic["successful"]
 
         if len(states) == 0:
@@ -294,6 +324,9 @@ def gather_demonstrations_as_hdf5(directory, out_dir, env_info, excluded_episode
             with open(ep_meta_path, "r") as f:
                 ep_meta = f.read()
             ep_data_grp.attrs["ep_meta"] = ep_meta
+            ep_data_grp.attrs["non_robot_qpos_idx"] = non_robot_qpos_idx
+            ep_data_grp.attrs["initial_qpos"] = initial_qpos
+            print("non_robot_qpos_idx", non_robot_qpos_idx)
 
         # write datasets for states and actions
         ep_data_grp.create_dataset("states", data=np.array(states))
@@ -305,6 +338,11 @@ def gather_demonstrations_as_hdf5(directory, out_dir, env_info, excluded_episode
         obs_grp = ep_data_grp.create_group("observations")
         for key, value in obs[0].items():
             obs_grp.create_dataset(key, data=np.array([o[key] for o in obs]))
+
+        # initial object qpos is a dictionary
+        ep_data_grp.create_group("initial_obj_qpos")
+        for key, value in initial_obj_qpos.item().items():
+            ep_data_grp["initial_obj_qpos"].create_dataset(key, data=value)
 
         # else:
         #     pass
@@ -463,6 +501,7 @@ if __name__ == "__main__":
             args.camera = None
     else:
         mirror_actions = True
+        config["seed"] = args.seed
         config["layout_ids"] = args.layout
         config["style_ids"] = args.style
         ### update config for kitchen envs ###
@@ -491,7 +530,6 @@ if __name__ == "__main__":
         use_camera_obs=False,
         control_freq=20,
         renderer=args.renderer,
-        seed=args.seed,
     )
 
     # Wrap this with visualization wrapper
@@ -548,6 +586,7 @@ if __name__ == "__main__":
             mirror_actions,
             render=(args.renderer != "mjviewer"),
             max_fr=args.max_fr,
+            env_name=config["env_name"],
         )
 
         print("Keep traj?", not discard_traj)
@@ -556,6 +595,8 @@ if __name__ == "__main__":
         if not args.debug:
             if discard_traj and ep_directory is not None:
                 excluded_eps.append(ep_directory.split("/")[-1])
+            if discard_traj:
+                continue
             hdf5_path = gather_demonstrations_as_hdf5(
                 tmp_directory, new_dir, env_info, excluded_episodes=excluded_eps
             )

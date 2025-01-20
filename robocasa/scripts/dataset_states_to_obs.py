@@ -236,6 +236,7 @@ def write_traj_to_file(
         env_meta["env_kwargs"]["generative_textures"] = "100p"
     if args.randomize_cameras:
         env_meta["env_kwargs"]["randomize_cameras"] = True
+    env_meta["env_kwargs"]["translucent_robot"] = args.transparent_robot
     env = EnvUtils.create_env_for_data_processing(
         env_meta=env_meta,
         camera_names=args.camera_names,
@@ -587,7 +588,7 @@ if __name__ == "__main__":
         default=[
             "robot0_agentview_left",
             "robot0_agentview_right",
-            "robot0_eye_in_hand",
+            # "robot0_eye_in_hand",
         ],
         help="(optional) camera name(s) to use for image observations. Leave out to not use image observations.",
     )
@@ -658,6 +659,8 @@ if __name__ == "__main__":
         action="store_true",
         help="(optional) add datagen info (used for mimicgen)",
     )
+
+    parser.add_argument("--transparent_robot", action="store_true")
 
     parser.add_argument("--generative_textures", action="store_true")
 

@@ -202,6 +202,18 @@ class EnvRobocasa:
                 )
         if "states" in state:
             self.env.sim.set_state_from_flattened(state["states"])
+            if (
+                "cab_2_left_group_doorhinge" in self.env.sim.model.joint_names
+            ):  # temporary fix to problems
+                # fix cabinet joint to avoid collisions of GR1 at initialization on reset
+                joint_idx = self.env.sim.model.joint_names.index(
+                    "cab_2_left_group_doorhinge"
+                )
+                joint_value = 1.8
+                self.env.sim.data.qpos[
+                    self.env.sim.model.jnt_qposadr[joint_idx]
+                ] = joint_value
+
             self.env.sim.forward()
             should_ret = True
 
@@ -269,8 +281,14 @@ class EnvRobocasa:
                     ret[k] = ObsUtils.process_obs(obs=ret[k], obs_key=k)
 
         # "object" key contains object information
+        ret["object-state"] = np.array(
+            di["object-state"]
+        )  # double copying for backward compatibility
         if "object-state" in di:
             ret["object"] = np.array(di["object-state"])
+        if "obj_pos" in di:  # more privileged info
+            ret["obj_pos"] = np.array(di["obj_pos"])
+            ret["obj_quat"] = np.array(di["obj_quat"])
 
         if self._is_v1:
             for robot in self.env.robots:
@@ -440,7 +458,11 @@ class EnvRobocasa:
             image_modalities = ["rgb"]
         obs_modality_specs = {
             "obs": {
-                "low_dim": [],  # technically unused, so we don't have to specify all of them
+                "low_dim": [
+                    "object-state",
+                    "obj_pos",
+                    "obj_quat",
+                ],  # technically unused, so we don't have to specify all of them
                 "rgb": image_modalities,
             }
         }

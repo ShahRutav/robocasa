@@ -67,7 +67,7 @@ class PnPCounterToCab(PnP):
         Resets simulation internal configurations.
         """
         super()._reset_internal()
-        self.cab.set_door_state(min=0.90, max=1.0, env=self, rng=self.rng)
+        self.cab.set_door_state(min=0.99, max=1.0, env=self, rng=self.rng)
 
     def _get_obj_cfgs(self):
         """
@@ -137,6 +137,27 @@ class PnPCounterToCab(PnP):
         obj_inside_cab = OU.obj_inside_of(self, "obj", self.cab)
         gripper_obj_far = OU.gripper_obj_far(self)
         return obj_inside_cab and gripper_obj_far
+
+
+class PnPCounterToCabEasy(PnPCounterToCab):
+    def _get_obj_cfgs(self):
+        cfgs = super()._get_obj_cfgs()
+        for cfg in cfgs:
+            if ("name" in cfg) and cfg["name"] == "obj":
+                cfg["placement"]["size"] = (0.1, 0.1)
+                cfg["placement"]["pos"] = (0.0, -1.0)
+            if ("name" in cfg) and cfg["name"] == "distr_counter":
+                cfg["placement"]["size"] = (0.1, 0.1)
+                cfg["placement"]["pos"] = (0.2, 0.2)
+        return cfgs
+
+    def _reset_observables(self):
+        super()._reset_observables()
+        if "cab_2_left_group_doorhinge" in self.sim.model.joint_names:
+            print("cab_2_left_group_doorhinge exists")
+            joint_idx = self.sim.model.joint_names.index("cab_2_left_group_doorhinge")
+            joint_value = 1.8
+            self.sim.data.qpos[self.sim.model.jnt_qposadr[joint_idx]] = joint_value
 
 
 class PnPCabToCounter(PnP):
