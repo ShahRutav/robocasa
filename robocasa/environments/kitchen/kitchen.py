@@ -65,12 +65,14 @@ _ROBOT_POS_OFFSETS: dict[str, list[float]] = {
     "GR1": [0, 0, 0.97],
     "GR1FixedLowerBody": [0, 0, 0.97],
     "GR1TwoFingered": [0, 0, 0.97],
+    "GR1SingleHand": [0, 0, 0.97],
     "G1FloatingBody": [0, -0.33, 0],
     "G1": [0, -0.33, 0],
     "G1FixedLowerBody": [0, -0.33, 0],
     "GoogleRobot": [0, 0, 0],
     "Demo": [0, 0, 0.97],
     "DemoTwoFingered": [0, 0, 0.97],
+    "DemoSingleHand": [0, 0, 0.97],
 }
 
 
@@ -246,6 +248,7 @@ class Kitchen(ManipulationEnv, metaclass=KitchenEnvMeta):
         use_distractors=False,
         translucent_robot=False,
         randomize_cameras=False,
+        ep_meta={},
     ):
         self.init_robot_base_pos = init_robot_base_pos
 
@@ -334,6 +337,7 @@ class Kitchen(ManipulationEnv, metaclass=KitchenEnvMeta):
             renderer=renderer,
             renderer_config=renderer_config,
             seed=seed,
+            ep_meta=ep_meta,
         )
 
     def _load_model(self):
@@ -545,6 +549,7 @@ class Kitchen(ManipulationEnv, metaclass=KitchenEnvMeta):
                     # modify object config to lie inside of container
                     cfg["placement"] = dict(
                         size=(0.01, 0.01),
+                        rotation=cfg["placement"].get("rotation", (0, 0)),
                         ensure_object_boundary_in_range=False,
                         sample_args=dict(
                             reference=container_cfg["name"],
@@ -587,6 +592,9 @@ class Kitchen(ManipulationEnv, metaclass=KitchenEnvMeta):
             freezable=cfg.get("freezable", None),
             max_size=cfg.get("max_size", (None, None, None)),
             object_scale=cfg.get("object_scale", None),
+        )
+        object_kwargs["joints"] = cfg.get(
+            "joints", [dict(type="free", damping="0.0005")]
         )
         info = object_info
 
@@ -721,6 +729,7 @@ class Kitchen(ManipulationEnv, metaclass=KitchenEnvMeta):
             if placement is None:
                 continue
             fixture_id = placement.get("fixture", None)
+
             if fixture_id is not None:
                 # get fixture to place object on
                 fixture = self.get_fixture(
@@ -730,6 +739,7 @@ class Kitchen(ManipulationEnv, metaclass=KitchenEnvMeta):
 
                 # calculate the total available space where object could be placed
                 sample_region_kwargs = placement.get("sample_region_kwargs", {})
+                # print("sample_region_kwargs: ", sample_region_kwargs, "fixture: ", cfg["name"])
                 reset_region = fixture.sample_reset_region(
                     env=self, **sample_region_kwargs
                 )
@@ -860,7 +870,6 @@ class Kitchen(ManipulationEnv, metaclass=KitchenEnvMeta):
                 site_tree = ET.fromstring(site_str)
                 self.model.worldbody.append(site_tree)
 
-            # print(f"obj: {cfg['name']}, x_range: {x_range}, y_range: {y_range}")
             placement_initializer.append_sampler(
                 sampler=UniformRandomSampler(
                     name="{}_Sampler".format(cfg["name"]),
@@ -898,10 +907,16 @@ class Kitchen(ManipulationEnv, metaclass=KitchenEnvMeta):
 
             # Loop through all objects and reset their positions
             for obj_pos, obj_quat, obj in object_placements.values():
-                self.sim.data.set_joint_qpos(
-                    obj.joints[0],
-                    np.concatenate([np.array(obj_pos), np.array(obj_quat)]),
-                )
+                if len(obj.joints) == 0:
+                    obj.set_pos(obj_pos)
+                    obj.set_euler(
+                        T.mat2euler(T.quat2mat(T.convert_quat(obj_quat, "xyzw")))
+                    )
+                else:
+                    self.sim.data.set_joint_qpos(
+                        obj.joints[0],
+                        np.concatenate([np.array(obj_pos), np.array(obj_quat)]),
+                    )
 
         # step through a few timesteps to settle objects
         action = np.zeros(self.action_spec[0].shape)  # apply empty action

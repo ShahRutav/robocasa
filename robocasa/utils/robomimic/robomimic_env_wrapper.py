@@ -284,6 +284,7 @@ class EnvRobocasa:
         ret["object-state"] = np.array(
             di["object-state"]
         )  # double copying for backward compatibility
+        ret["objects-joint-state"] = np.array(di["objects-joint-state"])
         if "object-state" in di:
             ret["object"] = np.array(di["object-state"])
         if "obj_pos" in di:  # more privileged info
@@ -462,6 +463,7 @@ class EnvRobocasa:
                     "object-state",
                     "obj_pos",
                     "obj_quat",
+                    "objects-joint-state",
                 ],  # technically unused, so we don't have to specify all of them
                 "rgb": image_modalities,
             }

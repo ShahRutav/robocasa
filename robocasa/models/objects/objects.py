@@ -26,6 +26,7 @@ class MJCFObject(MujocoXMLObject):
         margin=None,
         rgba=None,
         priority=None,
+        joints=[dict(type="free", damping="0.0005")],
     ):
         # get scale in x, y, z
         if isinstance(scale, float):
@@ -66,7 +67,7 @@ class MJCFObject(MujocoXMLObject):
         super().__init__(
             fname=new_xml_path,
             name=name,
-            joints=[dict(type="free", damping="0.0005")],
+            joints=joints,
             obj_type="all",
             duplicate_collision_geoms=False,
             scale=scale,

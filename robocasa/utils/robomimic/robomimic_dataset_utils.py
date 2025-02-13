@@ -81,6 +81,7 @@ def extract_action_dict(dataset):
             for key, data in this_action_dict.items():
                 if key in action_dict_group:
                     del action_dict_group[key]
+                print(f"Creating {key} in {demo} with shape {data.shape}")
                 action_dict_group.create_dataset(key, data=data)
 
     f.close()
@@ -202,7 +203,10 @@ def move_demo_to_new_key(f, old_demo_key, new_demo_key, delete_old_demo=True):
 def make_demo_ids_contiguous(dataset):
     f = h5py.File(dataset, "a")  # edit mode
 
-    num_old_demos = max([int(demo_key.split("_")[-1]) for demo_key in f["data"]]) + 1
+    demo_keys = [int(demo_key.split("_")[-1]) for demo_key in f["data"]]
+    if len(demo_keys) == 0:
+        demo_keys = [-1]
+    num_old_demos = max(demo_keys) + 1
     missing_demo_inds = [
         i for i in range(num_old_demos) if f"demo_{i}" not in f["data"]
     ]
