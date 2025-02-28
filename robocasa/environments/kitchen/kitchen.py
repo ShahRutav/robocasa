@@ -73,6 +73,8 @@ _ROBOT_POS_OFFSETS: dict[str, list[float]] = {
     "Demo": [0, 0, 0.97],
     "DemoTwoFingered": [0, 0, 0.97],
     "DemoSingleHand": [0, 0, 0.97],
+    "DemoTwoHand": [0, 0, 0.97],
+    "GR1TwoHand": [0, 0, 0.97],
 }
 
 
@@ -281,9 +283,6 @@ class Kitchen(ManipulationEnv, metaclass=KitchenEnvMeta):
         self.translucent_robot = translucent_robot
         self.randomize_cameras = randomize_cameras
 
-        # intialize cameras
-        self._cam_configs = deepcopy(CamUtils.CAM_CONFIGS)
-
         if isinstance(robots, str):
             robots = [robots]
 
@@ -292,6 +291,9 @@ class Kitchen(ManipulationEnv, metaclass=KitchenEnvMeta):
             if robots[i] == "PandaMobile":
                 robots[i] = "PandaOmron"
         assert len(robots) == 1
+
+        # intialize cameras
+        self._cam_configs = CamUtils.get_robot_cam_configs(robots[0])
 
         # set up currently unused variables (used in robosuite)
         self.use_object_obs = use_object_obs
@@ -372,7 +374,7 @@ class Kitchen(ManipulationEnv, metaclass=KitchenEnvMeta):
             print("layout: {}, style: {}".format(self.layout_id, self.style_id))
 
         # to be set later inside edit_model_xml function
-        self._curr_gen_fixtures = None
+        self._curr_gen_fixtures = self._ep_meta.get("gen_textures")
 
         # setup scene
         self.mujoco_arena = KitchenArena(
@@ -919,14 +921,19 @@ class Kitchen(ManipulationEnv, metaclass=KitchenEnvMeta):
                     )
 
         # step through a few timesteps to settle objects
-        action = np.zeros(self.action_spec[0].shape)  # apply empty action
+        action_dict = {}
         for robot in self.robots:
             for arm in robot.arms:
+                print("arm", arm, robot.arms)
+                action = np.zeros(self.action_spec[0].shape[0] // len(robot.arms))
                 if robot.part_controllers[arm].input_type == "absolute":
                     assert (
                         len(self.robots) == 1
                     ), "Only one robot is supported for now. It can be easily extended."
                     action = convert_delta_to_abs_action(action, robot, arm, self)
+                action_dict[arm] = action[: action.shape[0] - 1]
+                action_dict[arm + "_gripper"] = action[action.shape[0] - 1 :]
+        action = robot.create_action_vector(action_dict)
 
         # Since the env.step frequency is slower than the mjsim timestep frequency, the internal controller will output
         # multiple torque commands in between new high level action commands. Therefore, we need to denote via
@@ -1005,8 +1012,7 @@ class Kitchen(ManipulationEnv, metaclass=KitchenEnvMeta):
         """
         Adds new kitchen-relevant cameras to the environment. Will randomize cameras if specified.
         """
-
-        self._cam_configs = deepcopy(CamUtils.CAM_CONFIGS)
+        self._cam_configs = CamUtils.get_robot_cam_configs(self.robots[0].name)
         if self.randomize_cameras:
             self._randomize_cameras()
 
@@ -1176,7 +1182,8 @@ class Kitchen(ManipulationEnv, metaclass=KitchenEnvMeta):
         ):
             # sample textures
             assert self.generative_textures == "100p"
-            self._curr_gen_fixtures = get_random_textures(self.rng)
+            if self._curr_gen_fixtures is None or self._curr_gen_fixtures == {}:
+                self._curr_gen_fixtures = get_random_textures(self.rng)
 
             cab_tex = self._curr_gen_fixtures["cab_tex"]
             counter_tex = self._curr_gen_fixtures["counter_tex"]

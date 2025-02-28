@@ -25,6 +25,7 @@ def create_env(
     camera_widths=128,
     camera_heights=128,
     seed=None,
+    render_onscreen=False,
     # robocasa-related configs
     obj_instance_split=None,
     generative_textures=None,
@@ -84,7 +85,7 @@ def run_random_rollouts(env, num_rollouts, num_steps, video_path=None):
 
             if video_writer is not None:
                 video_img = env.sim.render(
-                    height=512, width=512, camera_name="robot0_agentview_center"
+                    height=512, width=768, camera_name="robot0_agentview_center"
                 )[::-1]
                 video_writer.append_data(video_img)
 
