@@ -250,6 +250,7 @@ class Kitchen(ManipulationEnv, metaclass=KitchenEnvMeta):
         use_distractors=False,
         translucent_robot=False,
         randomize_cameras=False,
+        camera_segmentations=None,
         ep_meta={},
     ):
         self.init_robot_base_pos = init_robot_base_pos
@@ -340,6 +341,7 @@ class Kitchen(ManipulationEnv, metaclass=KitchenEnvMeta):
             renderer_config=renderer_config,
             seed=seed,
             ep_meta=ep_meta,
+            camera_segmentations=camera_segmentations,
         )
 
     def _load_model(self):
@@ -742,9 +744,24 @@ class Kitchen(ManipulationEnv, metaclass=KitchenEnvMeta):
                 # calculate the total available space where object could be placed
                 sample_region_kwargs = placement.get("sample_region_kwargs", {})
                 # print("sample_region_kwargs: ", sample_region_kwargs, "fixture: ", cfg["name"])
-                reset_region = fixture.sample_reset_region(
-                    env=self, **sample_region_kwargs
-                )
+                reset_region = None
+                for i in range(10):
+                    try:
+                        reset_region = fixture.sample_reset_region(
+                            env=self, **sample_region_kwargs
+                        )
+                    except RandomizationError as e:
+                        if macros.VERBOSE:
+                            print(
+                                "Ranomization error in initial placement. Try #{}".format(
+                                    i
+                                )
+                            )
+                        raise RandomizationError("Could not place object")
+                    # except Exception as e:
+                    #     print("Error in sample_reset_region: ", e)
+                    # break
+
                 outer_size = reset_region["size"]
                 margin = placement.get("margin", 0.04)
                 outer_size = (outer_size[0] - margin, outer_size[1] - margin)
