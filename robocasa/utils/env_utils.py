@@ -36,6 +36,7 @@ def create_env(
     use_camera_obs=True,
     has_renderer=False,
     has_offscreen_renderer=True,
+    camera_segmentations=None,
 ):
     controller_config = load_composite_controller_config(
         controller=None,
@@ -63,6 +64,7 @@ def create_env(
         layout_ids=layout_ids,
         style_ids=style_ids,
         translucent_robot=False,
+        camera_segmentations=camera_segmentations,
     )
 
     env = robosuite.make(**env_kwargs)

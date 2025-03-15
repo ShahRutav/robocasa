@@ -2112,3 +2112,28 @@ OBJ_GROUPS["food_set1"] = [
 ]
 OBJ_GROUPS["group1"] = ["apple", "carrot", "banana", "bowl", "can"]
 OBJ_GROUPS["container_set2"] = ["plate", "bowl"]
+
+OBJ_GROUPS["fruit_set_1"] = [
+    "banana",
+    "grapes",
+    "apricot",
+    "strawberry",
+    "peach",
+    "orange",
+    "kiwi",
+    "dates",
+]
+OBJ_GROUPS["fruit_set_2"] = ["apple", "pear", "mango"]
+OBJ_GROUPS["vegetable_set_1"] = [
+    "eggplant",
+    "lime",
+    "corn",
+    "carrot",
+    "mushroom",
+    "potato",
+    "artichoke",
+    "tomato",
+]
+OBJ_GROUPS["vegetable_set_2"] = ["broccoli", "ginger", "onion"]
+OBJ_GROUPS["container_set_1"] = ["plate"]
+OBJ_GROUPS["container_set_test"] = ["bowl"]

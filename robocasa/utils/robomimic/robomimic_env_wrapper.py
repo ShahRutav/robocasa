@@ -290,6 +290,16 @@ class EnvRobocasa:
         if "obj_pos" in di:  # more privileged info
             ret["obj_pos"] = np.array(di["obj_pos"])
             ret["obj_quat"] = np.array(di["obj_quat"])
+        if "vegetable_container_pos" in di:
+            ret["vegetable_container_pos"] = np.array(di["vegetable_container_pos"])
+            ret["vegetable_container_to_robot0_eef_pos"] = np.array(
+                di["vegetable_container_to_robot0_eef_pos"]
+            )
+        if "vegetable_pos" in di:
+            ret["vegetable_pos"] = np.array(di["vegetable_pos"])
+            ret["vegetable_to_robot0_eef_pos"] = np.array(
+                di["vegetable_to_robot0_eef_pos"]
+            )
 
         if self._is_v1:
             for robot in self.env.robots:
@@ -414,6 +424,7 @@ class EnvRobocasa:
         camera_height,
         camera_width,
         reward_shaping,
+        segmentation_level=None,
         **kwargs,
     ):
         """
@@ -466,9 +477,15 @@ class EnvRobocasa:
                     "objects-joint-state",
                 ],  # technically unused, so we don't have to specify all of them
                 "rgb": image_modalities,
+                "segm": [
+                    f"{cn}_segmentation_{segmentation_level}" for cn in camera_names
+                ]
+                if segmentation_level is not None
+                else [],
             }
         }
         ObsUtils.initialize_obs_utils_with_obs_specs(obs_modality_specs)
+        segmentation_level = kwargs.pop("camera_segmentations", segmentation_level)
 
         # note that @postprocess_visual_obs is False since this env's images will be written to a dataset
         return cls(
@@ -477,6 +494,7 @@ class EnvRobocasa:
             render_offscreen=has_camera,
             use_image_obs=has_camera,
             postprocess_visual_obs=False,
+            camera_segmentations=segmentation_level,
             **kwargs,
         )
 

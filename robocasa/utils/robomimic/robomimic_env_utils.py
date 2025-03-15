@@ -238,6 +238,7 @@ def create_env_for_data_processing(
     camera_height,
     camera_width,
     reward_shaping,
+    segmentation_level=None,
     seed=None,
 ):
     """
@@ -282,6 +283,7 @@ def create_env_for_data_processing(
         camera_height=camera_height,
         camera_width=camera_width,
         reward_shaping=reward_shaping,
+        segmentation_level=segmentation_level,
         **env_kwargs,
     )
     check_env_version(env, env_meta)
