@@ -14,6 +14,7 @@ from robosuite.utils.mjcf_utils import (
     string_to_array,
     xml_path_completion,
 )
+from robosuite.utils.errors import RandomizationError
 
 import robocasa
 import robocasa.macros as macros
@@ -221,6 +222,8 @@ class Fixture(MujocoXMLObject):
 
     def sample_reset_region(self, *args, **kwargs):
         regions = self.get_reset_regions(*args, **kwargs)
+        if len(regions) == 0:
+            raise RandomizationError("No reset regions defined for object")
         return self.rng.choice(list(regions.values()))
 
     def get_site_info(self, sim):

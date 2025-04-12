@@ -272,7 +272,7 @@ class Kitchen(ManipulationEnv, metaclass=KitchenEnvMeta):
 
         # remove excluded layouts
         self.layout_and_style_ids = [
-            (int(l), int(s))
+            (int(l), s if isinstance(s, str) else int(s))
             for (l, s) in self.layout_and_style_ids
             if l not in self.EXCLUDE_LAYOUTS
         ]
@@ -344,155 +344,252 @@ class Kitchen(ManipulationEnv, metaclass=KitchenEnvMeta):
             camera_segmentations=camera_segmentations,
         )
 
-    def _load_model(self):
+    def _remove_specific_fixtures(self):
+        return
+
+    def _cleanup_model_memory(self):
+        """
+        Cleans up large attributes to reduce memory usage during recursive _load_model() calls.
+        Intended to be called every k recursive calls.
+        """
+        print("[Cleanup] Running memory cleanup")
+
+        attrs_to_delete = [
+            "model",
+            "mujoco_arena",
+            "fixtures",
+            "fixture_cfgs",
+            "fxtr_placements",
+            "placement_initializer",
+            "object_placements",
+            "renderer_config" if self.renderer == "mjviewer" else None,
+            # "object_cfgs",  # in case it's dynamically generated
+        ]
+
+        # Delete attributes if they exist
+        for attr in attrs_to_delete:
+            if attr is not None and hasattr(self, attr):
+                print(f"[Cleanup] Deleting {attr}")
+                try:
+                    delattr(self, attr)
+                except Exception as e:
+                    print(f"Warning: Could not delete {attr}: {e}")
+
+        # Also clear robot models if needed
+        if hasattr(self, "robots"):
+            for robot in self.robots:
+                if hasattr(robot, "robot_model"):
+                    try:
+                        del robot.robot_model
+                    except Exception as e:
+                        print(f"Warning: Could not delete robot_model: {e}")
+
+        # Optional: clear rng if it's unusually large (very rare)
+        # if hasattr(self, "rng"):
+        #     del self.rng
+
+        # Run garbage collection
+        import gc
+
+        gc.collect()
+
+    def _load_model(self, ind=0):
         """
         Loads an xml model, puts it in self.model
         """
+        # check if there is RAM memory increase with index. print the ram usage
+        # if ind > 0:
+        #     print("cleanup memory")
+        #     self._cleanup_model_memory()
+        # import psutil
+        # process = psutil.Process(os.getpid())
+        # mem_before = process.memory_info().rss / (1024 ** 2)  # in MB
+        # print(f"[Before] Memory usage: {mem_before:.2f} MB for index {ind}")
+
         super()._load_model()
 
-        for robot in self.robots:
-            if isinstance(robot.robot_model, PandaOmron):
-                robot.init_qpos = (
-                    -0.01612974,
-                    -1.03446714,
-                    -0.02397936,
-                    -2.27550888,
-                    0.03932365,
-                    1.51639493,
-                    0.69615947,
-                )
-                robot.init_torso_qpos = np.array([0.0])
+        while True:
+            for robot in self.robots:
+                if isinstance(robot.robot_model, PandaOmron):
+                    robot.init_qpos = (
+                        -0.01612974,
+                        -1.03446714,
+                        -0.02397936,
+                        -2.27550888,
+                        0.03932365,
+                        1.51639493,
+                        0.69615947,
+                    )
+                    robot.init_torso_qpos = np.array([0.0])
 
-        # determine sample layout and style
-        if "layout_id" in self._ep_meta and "style_id" in self._ep_meta:
-            self.layout_id = self._ep_meta["layout_id"]
-            self.style_id = self._ep_meta["style_id"]
-        else:
-            layout_id, style_id = self.rng.choice(self.layout_and_style_ids)
-            self.layout_id = int(layout_id)
-            self.style_id = int(style_id)
+            # determine sample layout and style
+            if "layout_id" in self._ep_meta and "style_id" in self._ep_meta:
+                self.layout_id = self._ep_meta["layout_id"]
+                self.style_id = self._ep_meta["style_id"]
+            else:
+                layout_id, style_id = self.rng.choice(self.layout_and_style_ids)
+                self.layout_id = int(layout_id)
+                self.style_id = style_id if isinstance(style_id, str) else int(style_id)
 
-        if macros.VERBOSE:
-            print("layout: {}, style: {}".format(self.layout_id, self.style_id))
+            if macros.VERBOSE:
+                print("layout: {}, style: {}".format(self.layout_id, self.style_id))
 
-        # to be set later inside edit_model_xml function
-        self._curr_gen_fixtures = self._ep_meta.get("gen_textures")
+            # to be set later inside edit_model_xml function
+            self._curr_gen_fixtures = self._ep_meta.get("gen_textures")
 
-        # setup scene
-        self.mujoco_arena = KitchenArena(
-            layout_id=self.layout_id,
-            style_id=self.style_id,
-            rng=self.rng,
-        )
-        # Arena always gets set to zero origin
-        self.mujoco_arena.set_origin([0, 0, 0])
-        self.set_cameras()  # setup cameras
-
-        # setup rendering for this layout
-        if self.renderer == "mjviewer":
-            camera_config = CamUtils.LAYOUT_CAMS.get(
-                self.layout_id, CamUtils.DEFAULT_LAYOUT_CAM
+            # setup scene
+            self.mujoco_arena = KitchenArena(
+                layout_id=self.layout_id,
+                style_id=self.style_id,
+                rng=self.rng,
             )
-            self.renderer_config = {"cam_config": camera_config}
+            # Arena always gets set to zero origin
+            self.mujoco_arena.set_origin([0, 0, 0])
+            self.set_cameras()  # setup cameras
 
-        # setup fixtures
-        self.fixture_cfgs = self.mujoco_arena.get_fixture_cfgs()
-        self.fixtures = {cfg["name"]: cfg["model"] for cfg in self.fixture_cfgs}
+            # setup rendering for this layout
+            if self.renderer == "mjviewer":
+                camera_config = CamUtils.LAYOUT_CAMS.get(
+                    self.layout_id, CamUtils.DEFAULT_LAYOUT_CAM
+                )
+                self.renderer_config = {"cam_config": camera_config}
 
-        # setup scene, robots, objects
-        self.model = ManipulationTask(
-            mujoco_arena=self.mujoco_arena,
-            mujoco_robots=[robot.robot_model for robot in self.robots],
-            mujoco_objects=list(self.fixtures.values()),
-        )
+            # setup fixtures
+            self.fixture_cfgs = self.mujoco_arena.get_fixture_cfgs()
+            self.fixtures = {cfg["name"]: cfg["model"] for cfg in self.fixture_cfgs}
+            self._remove_specific_fixtures()
 
-        # setup fixture locations
-        fxtr_placement_initializer = self._get_placement_initializer(
-            self.fixture_cfgs, z_offset=0.0
-        )
-        fxtr_placements = None
-        for i in range(10):
+            # setup scene, robots, objects
+            self.model = ManipulationTask(
+                mujoco_arena=self.mujoco_arena,
+                mujoco_robots=[robot.robot_model for robot in self.robots],
+                mujoco_objects=list(self.fixtures.values()),
+            )
+
+            # setup fixture locations
             try:
-                fxtr_placements = fxtr_placement_initializer.sample()
+                fxtr_placement_initializer = self._get_placement_initializer(
+                    self.fixture_cfgs, z_offset=0.0
+                )
             except RandomizationError as e:
                 if macros.VERBOSE:
-                    print("Ranomization error in initial placement. Try #{}".format(i))
+                    print(
+                        f"Could not place fixtures. Trying again with self._load_model(). Attempt {ind}"
+                    )
+                # self._load_model(ind=ind + 1)
+                # return
+                ind += 1
                 continue
-            break
-        if fxtr_placements is None:
-            if macros.VERBOSE:
-                print("Could not place fixtures. Trying again with self._load_model()")
-            self._load_model()
-            return
-        self.fxtr_placements = fxtr_placements
-        # Loop through all objects and reset their positions
-        for obj_pos, obj_quat, obj in fxtr_placements.values():
-            assert isinstance(obj, Fixture)
-            obj.set_pos(obj_pos)
-
-            # hacky code to set orientation
-            obj.set_euler(T.mat2euler(T.quat2mat(T.convert_quat(obj_quat, "xyzw"))))
-
-        # setup internal references related to fixtures
-        self._setup_kitchen_references()
-
-        # set robot position
-        if self.init_robot_base_pos is not None:
-            ref_fixture = self.get_fixture(self.init_robot_base_pos)
-        else:
-            fixtures = list(self.fixtures.values())
-            valid_src_fixture_classes = [
-                "CoffeeMachine",
-                "Toaster",
-                "Stove",
-                "Stovetop",
-                "SingleCabinet",
-                "HingeCabinet",
-                "OpenCabinet",
-                "Drawer",
-                "Microwave",
-                "Sink",
-                "Hood",
-                "Oven",
-                "Fridge",
-                "Dishwasher",
-            ]
-            while True:
-                ref_fixture = self.rng.choice(fixtures)
-                fxtr_class = type(ref_fixture).__name__
-                if fxtr_class not in valid_src_fixture_classes:
+            fxtr_placements = None
+            for i in range(10):
+                try:
+                    fxtr_placements = fxtr_placement_initializer.sample()
+                except RandomizationError as e:
+                    if macros.VERBOSE:
+                        print(
+                            "Ranomization error in initial placement. Try #{}".format(i)
+                        )
                     continue
                 break
+            if fxtr_placements is None:
+                if macros.VERBOSE:
+                    print(
+                        f"Could not place fixtures. Trying again with self._load_model(). Attempt {ind}"
+                    )
+                ind += 1
+                # self._load_model(ind=ind + 1)
+                # return
+                continue
+            self.fxtr_placements = fxtr_placements
+            # Loop through all objects and reset their positions
+            for obj_pos, obj_quat, obj in fxtr_placements.values():
+                assert isinstance(obj, Fixture)
+                obj.set_pos(obj_pos)
 
-        robot_base_pos, robot_base_ori = self.compute_robot_base_placement_pose(
-            ref_fixture=ref_fixture
-        )
-        robot_model = self.robots[0].robot_model
-        robot_model.set_base_xpos(robot_base_pos)
-        robot_model.set_base_ori(robot_base_ori)
+                # hacky code to set orientation
+                obj.set_euler(T.mat2euler(T.quat2mat(T.convert_quat(obj_quat, "xyzw"))))
 
-        # create and place objects
-        self._create_objects()
+            # setup internal references related to fixtures
+            self._setup_kitchen_references()
 
-        # setup object locations
-        self.placement_initializer = self._get_placement_initializer(self.object_cfgs)
-        object_placements = None
-        for i in range(1):
+            # set robot position
+            if self.init_robot_base_pos is not None:
+                ref_fixture = self.get_fixture(self.init_robot_base_pos)
+            else:
+                fixtures = list(self.fixtures.values())
+                valid_src_fixture_classes = [
+                    "CoffeeMachine",
+                    "Toaster",
+                    "Stove",
+                    "Stovetop",
+                    "SingleCabinet",
+                    "HingeCabinet",
+                    "OpenCabinet",
+                    "Drawer",
+                    "Microwave",
+                    "Sink",
+                    "Hood",
+                    "Oven",
+                    "Fridge",
+                    "Dishwasher",
+                ]
+                while True:
+                    ref_fixture = self.rng.choice(fixtures)
+                    fxtr_class = type(ref_fixture).__name__
+                    if fxtr_class not in valid_src_fixture_classes:
+                        continue
+                    break
+
+            robot_base_pos, robot_base_ori = self.compute_robot_base_placement_pose(
+                ref_fixture=ref_fixture
+            )
+            robot_model = self.robots[0].robot_model
+            robot_model.set_base_xpos(robot_base_pos)
+            robot_model.set_base_ori(robot_base_ori)
+
+            # create and place objects
+            self._create_objects()
+
+            # setup object locations
             try:
-                object_placements = self.placement_initializer.sample(
-                    placed_objects=self.fxtr_placements
+                self.placement_initializer = self._get_placement_initializer(
+                    self.object_cfgs
                 )
             except RandomizationError as e:
                 if macros.VERBOSE:
-                    print("Randomization error in initial placement. Try #{}".format(i))
+                    print(
+                        f"Could not place objects. Trying again with self._load_model(). Attempt {ind}"
+                    )
+                # self._load_model(ind=ind + 1)
+                # return
+                ind += 1
                 continue
+            object_placements = None
+            for i in range(1):
+                try:
+                    object_placements = self.placement_initializer.sample(
+                        placed_objects=self.fxtr_placements
+                    )
+                except RandomizationError as e:
+                    if macros.VERBOSE:
+                        print(
+                            "Randomization error in initial placement. Try #{}".format(
+                                i
+                            )
+                        )
+                    continue
+                break
+            if object_placements is None:
+                if macros.VERBOSE:
+                    print(
+                        f"Could not place objects. Trying again with self._load_model(). Attempt {ind}"
+                    )
+                # self._load_model(ind=ind + 1)
+                # return
+                ind += 1
+                continue
+            self.object_placements = object_placements
             break
-        if object_placements is None:
-            if macros.VERBOSE:
-                print("Could not place objects. Trying again with self._load_model()")
-            self._load_model()
-            return
-        self.object_placements = object_placements
 
     def _create_objects(self):
         """
@@ -596,6 +693,8 @@ class Kitchen(ManipulationEnv, metaclass=KitchenEnvMeta):
             freezable=cfg.get("freezable", None),
             max_size=cfg.get("max_size", (None, None, None)),
             object_scale=cfg.get("object_scale", None),
+            obj_registries=cfg.get("obj_registries", None),
+            split=cfg.get("obj_instance_split", self.obj_instance_split),
         )
         object_kwargs["joints"] = cfg.get(
             "joints", [dict(type="free", damping="0.0005")]
@@ -751,6 +850,8 @@ class Kitchen(ManipulationEnv, metaclass=KitchenEnvMeta):
                             env=self, **sample_region_kwargs
                         )
                     except RandomizationError as e:
+                        print("Error in sample_reset_region: ", e)
+                        print("Object: ", cfg["name"])
                         if macros.VERBOSE:
                             print(
                                 "Ranomization error in initial placement. Try #{}".format(
@@ -760,7 +861,7 @@ class Kitchen(ManipulationEnv, metaclass=KitchenEnvMeta):
                         raise RandomizationError("Could not place object")
                     # except Exception as e:
                     #     print("Error in sample_reset_region: ", e)
-                    # break
+                    break
 
                 outer_size = reset_region["size"]
                 margin = placement.get("margin", 0.04)
@@ -813,6 +914,9 @@ class Kitchen(ManipulationEnv, metaclass=KitchenEnvMeta):
                 # center surface point of entire region
                 ref_pos = fixture.pos + [0, 0, reset_region["offset"][2]]
                 ref_rot = fixture.rot
+                # if cfg["name"] == "plate":
+                #     print(fixture)
+                #     print(fixture.pos, reset_region["offset"], ref_pos)
 
                 # x, y, and rotational ranges for randomization
                 x_range = (
@@ -825,6 +929,8 @@ class Kitchen(ManipulationEnv, metaclass=KitchenEnvMeta):
                     + reset_region["offset"][1]
                     + intra_offset[1]
                 )
+                # if cfg["name"] == "plate":
+                #     print("x_range: ", x_range, "y_range: ", y_range)
                 rotation = placement.get("rotation", np.array([-np.pi / 4, np.pi / 4]))
             else:
                 target_size = placement.get("size", None)
@@ -1515,7 +1621,7 @@ class Kitchen(ManipulationEnv, metaclass=KitchenEnvMeta):
             freezable=freezable,
             rng=self.rng,
             obj_registries=(obj_registries or self.obj_registries),
-            split=(split or self.obj_instance_split),
+            split=split,
             max_size=max_size,
             object_scale=object_scale,
         )
@@ -1536,7 +1642,7 @@ class Kitchen(ManipulationEnv, metaclass=KitchenEnvMeta):
                 return True
         return False
 
-    def get_fixture(self, id, ref=None, size=(0.2, 0.2)):
+    def get_fixture(self, id, ref=None, size=(0.2, 0.2), loc=None):
         """
         search fixture by id (name, object, or type)
 
@@ -1593,6 +1699,15 @@ class Kitchen(ManipulationEnv, metaclass=KitchenEnvMeta):
                         continue
                 cand_fixtures.append(fxtr)
 
+            if loc is not None:
+                if loc == "above":
+                    cand_fixtures = [
+                        fxtr
+                        for fxtr in cand_fixtures
+                        if fxtr.pos[2] > ref_fixture.pos[2]
+                    ]
+                else:
+                    raise ValueError(f"Invalid loc: {loc} for sampling a fixture")
             # first, try to find fixture "containing" the reference fixture
             for fxtr in cand_fixtures:
                 if OU.point_in_fixture(ref_fixture.pos, fxtr, only_2d=True):

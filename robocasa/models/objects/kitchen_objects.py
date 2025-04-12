@@ -2113,6 +2113,7 @@ OBJ_GROUPS["food_set1"] = [
 OBJ_GROUPS["group1"] = ["apple", "carrot", "banana", "bowl", "can"]
 OBJ_GROUPS["container_set2"] = ["plate", "bowl"]
 
+############################################################ BENCHMARKING OBJECTS ############################################################
 OBJ_GROUPS["fruit_set_1"] = [
     "banana",
     "grapes",
@@ -2122,6 +2123,8 @@ OBJ_GROUPS["fruit_set_1"] = [
     "orange",
     "kiwi",
     "dates",
+    "tangerine",
+    "pomegranate",
 ]
 OBJ_GROUPS["fruit_set_2"] = ["apple", "pear", "mango"]
 OBJ_GROUPS["vegetable_set_1"] = [
@@ -2136,4 +2139,61 @@ OBJ_GROUPS["vegetable_set_1"] = [
 ]
 OBJ_GROUPS["vegetable_set_2"] = ["broccoli", "ginger", "onion"]
 OBJ_GROUPS["container_set_1"] = ["plate"]
+OBJ_GROUPS["container_set_train"] = ["plate"]
 OBJ_GROUPS["container_set_test"] = ["bowl"]
+
+OBJ_GROUPS["fruit_set_train"] = [
+    "banana",
+    "grapes",
+    "apricot",
+    "strawberry",
+    "peach",
+    "orange",
+    "kiwi",
+    "dates",
+    "tangerine",
+    "pomegranate",
+]
+OBJ_GROUPS["fruit_set_test"] = ["apple", "pear", "mango", "cherry"]
+OBJ_GROUPS["vegetable_set_train"] = [
+    "eggplant",
+    "lime",
+    "corn",
+    "carrot",
+    "mushroom",
+    "potato",
+    "artichoke",
+    "tomato",
+    "bell_pepper",
+    "garlic",
+]
+OBJ_GROUPS["vegetable_set_test"] = ["broccoli", "ginger", "onion", "brussel_sprout"]
+
+OBJ_GROUPS["meat_set_train"] = [
+    "ham",
+    "steak",
+    "sushi",
+    "lamb_chop",
+    "fish",
+    "pork_chop",
+    "sausage",
+    "pork_loin",
+    "shrimp",
+    "scallops",
+]
+OBJ_GROUPS["meat_set_test"] = ["chicken_breast", "dumpling", "bacon"]
+OBJ_GROUPS["bread_set_train"] = ["scone", "bread", "baguette"]
+OBJ_GROUPS["bread_set_test"] = ["bagel"]
+OBJ_GROUPS["packaged_food_train"] = [
+    "canola_oil",
+    "canned_food",
+    "bagged_food",
+    "yogurt",
+    "spaghetti_box",
+    "honey_bottle",
+    "olive_oil_bottle",
+    "peanut_butter",
+    "boxed_food",
+    "bar",
+]
+OBJ_GROUPS["packaged_food_test"] = ["cereal", "vinegar", "chips", "jello_cup"]

@@ -98,6 +98,10 @@ class EnvRobocasa:
                         observable_name=ob_name, attribute="active", modifier=True
                     )
 
+    @property
+    def sim(self):
+        return self.env.sim
+
     def step(self, action):
         """
         Step in the environment with an action.
@@ -149,6 +153,9 @@ class EnvRobocasa:
     # notifies the environment whether or not the next environemnt testing object should update its category
     def update_env(self, attr, value):
         setattr(self.env, attr, value)
+
+    def reset_from_xml_string(self, xml_string):
+        self.env.reset_from_xml_string(xml_string)
 
     def reset_to(self, state):
         """
@@ -273,8 +280,9 @@ class EnvRobocasa:
             )
         ret = {}
         for k in di:
-            if (k in ObsUtils.OBS_KEYS_TO_MODALITIES) and ObsUtils.key_is_obs_modality(
-                key=k, obs_modality="rgb"
+            if (k in ObsUtils.OBS_KEYS_TO_MODALITIES) and (
+                ObsUtils.key_is_obs_modality(key=k, obs_modality="rgb")
+                or ObsUtils.key_is_obs_modality(key=k, obs_modality="segm")
             ):
                 ret[k] = di[k][::-1]
                 if self.postprocess_visual_obs:

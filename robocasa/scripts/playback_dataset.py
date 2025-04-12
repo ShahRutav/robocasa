@@ -348,7 +348,7 @@ def playback_dataset(args):
     elif "data" in f.keys():
         demos = list(f["data"].keys())
 
-    inds = np.argsort([int(elem[5:]) for elem in demos])
+    inds = np.argsort([int(elem.split("_")[-1]) for elem in demos])
     demos = [demos[i] for i in inds]
 
     # maybe reduce the number of demonstrations to playback
@@ -492,7 +492,8 @@ def get_playback_args():
         default=[
             "robot0_agentview_left",
             "robot0_agentview_right",
-            "robot0_eye_in_hand",
+            # "robot0_agentview_center",
+            # "robot0_eye_in_hand",
         ],
         help="(optional) camera name(s) / image observation(s) to use for rendering on-screen or to video. Default is"
         "None, which corresponds to a predefined camera for each env type",

@@ -211,7 +211,7 @@ class UniformRandomSampler(ObjectPositionSampler):
             rng=rng,
         )
 
-    def _sample_x(self):
+    def _sample_x(self, obj_size=None):
         """
         Samples the x location for a given object
 
@@ -219,9 +219,19 @@ class UniformRandomSampler(ObjectPositionSampler):
             float: sampled x position
         """
         minimum, maximum = self.x_range
+        if obj_size is not None:
+            buffer = min(obj_size[0], obj_size[1]) / 2
+            if self.ensure_object_boundary_in_range:
+                minimum += buffer
+                maximum -= buffer
+
+        if minimum > maximum:
+            raise RandomizationError(
+                f"Invalid x range for placement initializer: ({minimum}, {maximum})"
+            )
         return self.rng.uniform(high=maximum, low=minimum)
 
-    def _sample_y(self):
+    def _sample_y(self, obj_size=None):
         """
         Samples the y location for a given object
 
@@ -229,6 +239,16 @@ class UniformRandomSampler(ObjectPositionSampler):
             float: sampled y position
         """
         minimum, maximum = self.y_range
+        if obj_size is not None:
+            buffer = min(obj_size[0], obj_size[1]) / 2
+            if self.ensure_object_boundary_in_range:
+                minimum += buffer
+                maximum -= buffer
+
+        if minimum > maximum:
+            raise RandomizationError(
+                f"Invalid y range for placement initializer: ({minimum}, {maximum})"
+            )
         return self.rng.uniform(high=maximum, low=minimum)
 
     def _sample_quat(self):

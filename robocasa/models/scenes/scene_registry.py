@@ -98,22 +98,32 @@ def get_style_path(style_id):
 
     Args:
         style_id (int or StyleType): style id (int or enum)
+        or str for the l1, l2, l3 styles
 
     Return:
         str: yaml path for specified style
     """
+    base_dir = f"scenes/kitchen_styles"
     if isinstance(style_id, int):
         style_int_to_name = dict(
             map(lambda item: (item.value, item.name.lower()), StyleType)
         )
         style_name = style_int_to_name[style_id]
+    elif isinstance(style_id, str):
+        style_name = style_id.lower()
+        # this should be of the format 001_l1.yaml
+        style_idx = int(style_name.split("_")[0])
+        style_split = style_name.split("_")[1]
+        # search in base_dir for the style
+        base_dir = f"scenes/kitchen_styles/{style_split}"
+        style_name = f"{style_idx:03d}"
     elif isinstance(style_id, StyleType):
         style_name = style_id.name.lower()
     else:
         raise ValueError
 
     return xml_path_completion(
-        f"scenes/kitchen_styles/{style_name}.yaml",
+        f"{base_dir}/{style_name}.yaml",
         root=robocasa.models.assets_root,
     )
 
@@ -143,11 +153,14 @@ def unpack_style_ids(style_ids):
     if not isinstance(style_ids, list):
         style_ids = [style_ids]
 
-    style_ids = [int(id) for id in style_ids]
+    if isinstance(style_ids[0], str):
+        style_ids = [id for id in style_ids]
+    else:
+        style_ids = [int(id) for id in style_ids]
 
     all_style_ids = []
     for id in style_ids:
-        if id < 0:
+        if isinstance(id, int) and (id < 0):
             all_style_ids += STYLE_GROUPS_TO_IDS[id]
         else:
             all_style_ids.append(id)

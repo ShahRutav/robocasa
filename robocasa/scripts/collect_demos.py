@@ -34,6 +34,8 @@ import robocasa.macros as macros
 from robocasa.models.fixtures import FixtureType
 from robocasa.utils.robomimic.robomimic_dataset_utils import convert_to_robomimic_format
 
+from icrt.util.misc import confirm_user
+
 
 def control_seed(seed):
     random.seed(seed)
@@ -44,12 +46,22 @@ def control_seed(seed):
 
 
 def is_empty_input_spacemouse(action_dict):
+    if ("left_delta" in action_dict.keys()) and ("right_delta" in action_dict.keys()):
+        if (
+            np.all(action_dict["left_delta"] == 0)
+            and np.all(action_dict["right_delta"] == 0)
+            and np.all(action_dict["base_mode"] == -1)
+            and np.all(action_dict["base"] == 0)
+        ):
+            return True
+        return False
     if (
         np.all(action_dict["right_delta"] == 0)
         and action_dict["base_mode"] == -1
         and np.all(action_dict["base"] == 0)
     ):
         return True
+
     return False
 
 
@@ -78,24 +90,31 @@ def collect_human_trajectory(
 
     ep_meta = None
     ep_meta_file_name = f"scene_configs/ep_meta_{env_name}.pkl"
-    load_from_pickle = True
-
-    if (load_from_pickle) and (env_name != "Lift"):
-        ep_meta = pickle.load(open(ep_meta_file_name, "rb"))
+    load_from_pickle = False
+    if hasattr(env, "meta_file_path"):
+        ep_meta_file_name = env.meta_file_path()
+        # load the json file if it exists
+        ep_meta = json.load(open(ep_meta_file_name, "r"))
         env.set_ep_meta(ep_meta)
+
+    # if (load_from_pickle) and (env_name != "Lift"):
+    #     ep_meta = pickle.load(open(ep_meta_file_name, "rb"))
+    #     env.set_ep_meta(ep_meta)
 
     env.reset()
 
-    if (not load_from_pickle) and (env_name != "Lift"):
-        ep_meta = env.get_ep_meta()
-        pickle.dump(ep_meta, open(ep_meta_file_name, "wb"))
+    # if (not load_from_pickle) and (env_name != "Lift"):
+    #     ep_meta = env.get_ep_meta()
+    #     pickle.dump(ep_meta, open(ep_meta_file_name, "wb"))
     print("ep_meta", ep_meta)
+    # import ipdb; ipdb.set_trace()
 
     # print(json.dumps(ep_meta, indent=4))
     lang = None
-    if ep_meta is not None:
+    if ep_meta is None:
+        ep_meta = env.get_ep_meta()
+    if print_info:
         lang = ep_meta.get("lang", None)
-    if print_info and lang is not None:
         print(colored(f"Instruction: {lang}", "green"))
 
     # degugging: code block here to quickly test and close env
@@ -109,7 +128,8 @@ def collect_human_trajectory(
     task_completion_hold_count = (
         -1
     )  # counter to collect 10 timesteps after reaching goal
-    device.start_control()
+    for d in device:
+        d.start_control()
 
     nonzero_ac_seen = False
 
@@ -123,11 +143,22 @@ def collect_human_trajectory(
         for robot in env.robots
     ]
 
+    active_robot = env.robots[device[0].active_robot]
     zero_action = np.zeros(env.action_dim)
-    # controller has absolute actions, so we need to set the initial action to be the current position
-    active_robot = env.robots[device.active_robot]
-    if active_robot.part_controllers[arm].input_type == "absolute":
-        zero_action = convert_delta_to_abs_action(zero_action, active_robot, arm, env)
+    zero_action_dict = {}
+    arms = ["left", "right"] if args.dual_arm else ["left"]
+    for arm in arms:
+        # controller has absolute actions, so we need to set the initial action to be the current position
+        zero_action = np.zeros(7)
+        if active_robot.part_controllers[arm].input_type == "absolute":
+            zero_action = convert_delta_to_abs_action(
+                zero_action, active_robot, arm, env
+            )
+        zero_action_dict[f"{arm}"] = zero_action[: zero_action.shape[0] - 1]
+        zero_action_dict[f"{arm}_gripper"] = zero_action[zero_action.shape[0] - 1 :]
+    zero_action_dict["base_mode"] = -1
+    zero_action_dict["base"] = np.zeros(3)
+    zero_action = active_robot.create_action_vector(zero_action_dict)
     for _ in range(1):
         # do a dummy step thru base env to initalize things, but don't record the step
         if isinstance(env, DataCollectionWrapper):
@@ -143,11 +174,20 @@ def collect_human_trajectory(
         start = time.time()
 
         # Set active robot
-        active_robot = env.robots[device.active_robot]
-        active_arm = device.active_arm
-
-        # Get the newest action
-        input_ac_dict = device.input2action(mirror_actions=mirror_actions)
+        active_robot = env.robots[device[0].active_robot]
+        input_ac_dict = {}
+        for d_ind, d in enumerate(device):
+            active_arm = d.active_arm
+            # Get the newest action
+            arm_ac_dict = d.input2action(mirror_actions=mirror_actions)
+            if d_ind == 0:
+                input_ac_dict = arm_ac_dict
+            else:
+                if arm_ac_dict is None:
+                    continue
+                for k, v in arm_ac_dict.items():
+                    if active_arm in k:
+                        input_ac_dict[k] = v
 
         # If action is none, then this a reset so we should break
         if input_ac_dict is None:
@@ -170,6 +210,7 @@ def collect_human_trajectory(
             else:
                 raise ValueError
 
+        # print(is_empty_input_spacemouse(action_dict))
         if is_empty_input_spacemouse(action_dict):
             if not nonzero_ac_seen:
                 if render:
@@ -178,12 +219,15 @@ def collect_human_trajectory(
         else:
             nonzero_ac_seen = True
 
+        print("action_dict", action_dict)
         # Maintain gripper state for each robot but only update the active robot with action
         env_action = [
             robot.create_action_vector(all_prev_gripper_actions[i])
             for i, robot in enumerate(env.robots)
         ]
-        env_action[device.active_robot] = active_robot.create_action_vector(action_dict)
+        env_action[device[0].active_robot] = active_robot.create_action_vector(
+            action_dict
+        )
         env_action = np.concatenate(env_action)
 
         # Run environment step
@@ -425,7 +469,7 @@ if __name__ == "__main__":
         "--device",
         type=str,
         default="spacemouse",
-        choices=["keyboard", "keyboardmobile", "spacemouse", "dummy"],
+        choices=["keyboard", "keyboardmobile", "spacemouse", "dummy", "oculus"],
     )
     parser.add_argument(
         "--pos-sensitivity",
@@ -441,6 +485,7 @@ if __name__ == "__main__":
     )
 
     parser.add_argument("--debug", action="store_true")
+    parser.add_argument("--dual_arm", action="store_true")
     parser.add_argument(
         "--renderer", type=str, default="mjviewer", choices=["mjviewer", "mujoco"]
     )
@@ -453,9 +498,14 @@ if __name__ == "__main__":
         "--style", type=int, nargs="+", default=[0, 1, 2, 3, 4, 5, 6, 7, 8, 11]
     )
     parser.add_argument("--generative_textures", action="store_true")
+    parser.add_argument("--ref_frame", type=str, default="world")
     args = parser.parse_args()
 
     control_seed(args.seed)
+    for robot in args.robots:
+        if "GR1" in robot:
+            args.controller = "WHOLE_BODY_MINK_IK"
+    print("Controller:", args.controller)
     # Get controller config
     # controller_config = load_controller_config(default_controller=args.controller)
     controller_config = load_composite_controller_config(
@@ -469,7 +519,10 @@ if __name__ == "__main__":
             WholeBodyMinkIK,
         )
     controller_config["body_parts"]["right"]["input_type"] = "absolute"
-    controller_config["body_parts"]["right"]["input_ref_frame"] = "world"
+    controller_config["body_parts"]["right"]["input_ref_frame"] = args.ref_frame
+    if "left" in controller_config["body_parts"]:
+        controller_config["body_parts"]["left"]["input_type"] = "absolute"
+        controller_config["body_parts"]["left"]["input_ref_frame"] = args.ref_frame
 
     env_name = args.environment
 
@@ -500,7 +553,7 @@ if __name__ == "__main__":
         elif args.camera == "free":
             args.camera = None
     else:
-        mirror_actions = True
+        mirror_actions = False if args.device == "oculus" else True
         config["seed"] = args.seed
         config["layout_ids"] = args.layout
         config["style_ids"] = args.style
@@ -565,12 +618,39 @@ if __name__ == "__main__":
             # vendor_id=macros.SPACEMOUSE_VENDOR_ID,
             # product_id=macros.SPACEMOUSE_PRODUCT_ID,
         )
+    elif args.device == "oculus":
+        assert args.pos_sensitivity == 3.0
+        from robosuite.devices.oculus import Oculus
+
+        if not args.dual_arm:
+            device = Oculus(
+                env=env,
+                pos_sensitivity=args.pos_sensitivity,
+                rot_sensitivity=args.rot_sensitivity,
+            )
+        else:
+            device = []
+            for arm_index, arm in enumerate(["left", "right"]):
+                device.append(
+                    Oculus(
+                        env=env,
+                        pos_sensitivity=args.pos_sensitivity,
+                        rot_sensitivity=args.rot_sensitivity,
+                        arm_index=arm_index,
+                    )
+                )
     else:
         raise ValueError
+    if not isinstance(device, list):
+        device = [device]
+    print(len(device), "devices")
 
     # make a new timestamped directory
-    new_dir = os.path.join(args.directory, time_str)
-    os.makedirs(new_dir)
+    new_dir = os.path.join(args.directory)
+    assert not os.path.exists(
+        os.path.join(new_dir, "demo.hdf5")
+    ), "Directory already exists"
+    os.makedirs(new_dir, exist_ok=True)
 
     excluded_eps = []
 
@@ -588,8 +668,13 @@ if __name__ == "__main__":
             max_fr=args.max_fr,
             env_name=config["env_name"],
         )
+        # ask the human if they want to keep the trajectory
+        print("Valid demos so far:", valid_demos)
+        if confirm_user("Do you want to keep this trajectory? (y/n)"):
+            discard_traj = False
+        else:
+            discard_traj = True
 
-        print("Keep traj?", not discard_traj)
         if not discard_traj:
             valid_demos += 1
         if not args.debug:
@@ -601,5 +686,7 @@ if __name__ == "__main__":
                 tmp_directory, new_dir, env_info, excluded_episodes=excluded_eps
             )
             convert_to_robomimic_format(hdf5_path)
+        if not confirm_user("continue collecting demos? (y/n)"):
+            break
         if valid_demos >= args.n_demos:
             break

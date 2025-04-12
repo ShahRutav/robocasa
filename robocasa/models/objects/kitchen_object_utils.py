@@ -373,6 +373,11 @@ def sample_kitchen_object_helper(
                     if freezable is True and cat_meta.freezable is not True:
                         invalid = True
 
+                    if (
+                        not invalid
+                    ):  # we found one instance of the category that satisfies the constraints; constraints are shared across all instances of the category
+                        break
+
                 if invalid:
                     continue
 

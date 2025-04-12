@@ -27,6 +27,7 @@ from robocasa.environments.kitchen.multi_stage.chopping_food.arrange_vegetables 
     ArrangeVegetables,
 )
 from robocasa.environments.kitchen.play_env.sink_play import *
+from robocasa.environments.kitchen.play_env.play_env import *
 from robocasa.environments.kitchen.multi_stage.chopping_food.bread_setup_slicing import (
     BreadSetupSlicing,
 )
