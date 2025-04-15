@@ -2182,8 +2182,8 @@ OBJ_GROUPS["meat_set_train"] = [
     "scallops",
 ]
 OBJ_GROUPS["meat_set_test"] = ["chicken_breast", "dumpling", "bacon"]
-OBJ_GROUPS["bread_set_train"] = ["scone", "bread", "baguette"]
-OBJ_GROUPS["bread_set_test"] = ["bagel"]
+OBJ_GROUPS["bread_set_train"] = ["bread", "baguette"]
+OBJ_GROUPS["bread_set_test"] = ["bagel", "scone"]
 OBJ_GROUPS["packaged_food_train"] = [
     "canola_oil",
     "canned_food",

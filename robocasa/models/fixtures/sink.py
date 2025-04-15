@@ -56,7 +56,7 @@ class Sink(Fixture):
             mode = rng.choice(["on", "off"])
 
         if mode == "off":
-            joint_val = 0.0
+            joint_val = 0.25
         elif mode == "on":
             joint_val = rng.uniform(0.40, 0.50)
 

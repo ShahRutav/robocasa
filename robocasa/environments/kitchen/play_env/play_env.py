@@ -35,18 +35,18 @@ class BaseEnvForPlay(Kitchen):
         )
         print("layout_id: ", self.layout_id)
         # print(f"self.sink {self.sink}; self.stove {self.stove}; self.counter_stove {self.counter_stove}; self.counter_sink {self.counter_sink}; self.microwave {self.microwave}")
-        if self.layout_id not in [3]:
-            try:
-                self.cab_sink = self.register_fixture_ref(
-                    "cab_sink", dict(id=FixtureType.CABINET, ref=self.sink, loc="above")
-                )
-            except:
-                import ipdb
-
-                ipdb.set_trace()
+        if self.layout_id not in [1, 3, 4, 5, 6]:
+            self.cab_sink = self.register_fixture_ref(
+                "cab_sink", dict(id=FixtureType.CABINET, ref=self.sink, loc="above")
+            )
         else:
-            self.cab_sink = -1
-        # self.EXCLUDE_LAYOUTS = [8,9] # only used for testing in L3
+            self.cab_sink = None
+
+    def split_type(self):
+        """
+        Returns the split type of the environment.
+        """
+        return "train"
 
     def get_ep_meta(self):
         ep_meta = super().get_ep_meta()
@@ -54,14 +54,20 @@ class BaseEnvForPlay(Kitchen):
         return ep_meta
 
     def _remove_specific_fixtures(self):
-        remove_keys = ["toaster_main_group"]
-        keys = list(self.fixtures.keys())
-        for key in keys:
-            if key in remove_keys:
-                del self.fixtures[key]
-        for elem in self.fixture_cfgs:
-            if elem["name"] in remove_keys:
-                self.fixture_cfgs.remove(elem)
+        remove_keys = [
+            "toaster_main_group",
+            "toaster_right_group",
+            "toaster_left_group",
+            "coffee_machine_left_group",
+            "coffee_machine_right_group",
+            "coffee_machine_main_group",
+        ]
+        self.fixtures = {
+            key: value for key, value in self.fixtures.items() if key not in remove_keys
+        }
+        self.fixture_cfgs = [
+            elem for elem in self.fixture_cfgs if elem["name"] not in remove_keys
+        ]
         return
 
     def _get_obj_cfgs(self):
@@ -72,7 +78,7 @@ class BaseEnvForPlay(Kitchen):
 
 
 class SinkEnvForPlay(BaseEnvForPlay):
-    EXCLUDE_LAYOUTS = [3]
+    EXCLUDE_LAYOUTS = []
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -82,28 +88,13 @@ class SinkEnvForPlay(BaseEnvForPlay):
         self.init_robot_base_pos = self.sink
         return
 
-    def _remove_specific_fixtures(self):
-        remove_keys = [
-            "coffee_machine_left_group",
-            "coffee_machine_right_group",
-            "coffee_machine_main_group",
-        ]
-        keys = list(self.fixtures.keys())
-        for key in keys:
-            if key in remove_keys:
-                del self.fixtures[key]
-        for elem in self.fixture_cfgs:
-            if elem["name"] in remove_keys:
-                self.fixture_cfgs.remove(elem)
-        return
-
     def _get_obj_cfgs(self):
+        split_type = self.split_type()
         cfgs = []
-        """
         cfgs.append(
             dict(
                 name="fruit",
-                obj_groups="fruit_set_train",
+                obj_groups=f"fruit_set_{split_type}",
                 obj_registries=("objaverse", "aigen"),
                 obj_instance_split=None,
                 graspable=True,
@@ -112,14 +103,14 @@ class SinkEnvForPlay(BaseEnvForPlay):
                     size=(1.0, 1.0),
                     rotation=(np.pi / 2 - np.pi / 8, np.pi / 2 + np.pi / 8),
                     pos=("ref", -1.0),
-                    try_to_place_in="container_set_train",
+                    try_to_place_in=f"container_set_{split_type}",
                     container_kwargs=dict(
                         placement=dict(
                             fixture=self.counter_sink,
                             sample_region_kwargs=dict(
                                 ref=self.sink, loc="left_right", top_size=(0.25, 0.25)
                             ),
-                            size=(0.35, 0.45),
+                            size=(0.35, 0.35),
                             pos=("ref", -1.0),
                         ),
                     ),
@@ -128,64 +119,119 @@ class SinkEnvForPlay(BaseEnvForPlay):
         )
         cfgs.append(
             dict(
+                name="bread",
+                obj_groups=f"bread_set_{split_type}",
+                obj_registries=("objaverse", "aigen"),
+                obj_instance_split=None,
+                graspable=True,
+                placement=dict(
+                    fixture=self.counter_sink,
+                    size=(1.0, 1.0),
+                    rotation=(np.pi / 2 - np.pi / 8, np.pi / 2 + np.pi / 8),
+                    pos=("ref", -1.0),
+                    try_to_place_in=f"container_set_{split_type}",
+                    container_kwargs=dict(
+                        placement=dict(
+                            fixture=self.counter_sink,
+                            sample_region_kwargs=dict(
+                                ref=self.sink, loc="left_right", top_size=(0.25, 0.25)
+                            ),
+                            size=(0.35, 0.35),
+                            pos=("ref", -1.0),
+                        ),
+                    ),
+                ),
+            )
+        )
+        cfgs.append(
+            dict(
+                name="packed_food",
+                obj_groups=f"packaged_food_{split_type}",
+                graspable=True,
+                obj_registries=("objaverse", "aigen"),
+                obj_instance_split=None,
+                placement=dict(
+                    fixture=self.counter_sink,
+                    sample_region_kwargs=dict(
+                        ref=self.sink, loc="left_right", top_size=(0.25, 0.35)
+                    ),
+                    size=(0.25, 0.35),
+                    pos=("ref", -1.0),
+                    rotation=[
+                        (np.pi / 2 - np.pi / 16, np.pi / 2 + np.pi / 16),
+                    ],
+                ),
+            )
+        )
+
+        cfgs.append(
+            dict(
                 name="vegetable",
-                obj_groups="vegetable_set_train",
+                obj_groups=f"vegetable_set_{split_type}",
                 graspable=True,
                 placement=dict(
                     fixture=self.sink,
                     size=(1.0, 1.0),
                     rotation=(np.pi / 2 - np.pi / 8, np.pi / 2 + np.pi / 8),
                     pos=("ref", -1.0),
-                    try_to_place_in="container_set_train",
+                    try_to_place_in=f"container_set_{split_type}",
                     container_kwargs=dict(
                         placement=dict(
                             fixture=self.sink,
-                            size=(0.25, 0.25),
+                            size=(0.3, 0.3),
                             pos=(0.5, 0.4),
                         ),
                     ),
                 ),
             )
         )
-        if self.cab_sink == -1:
-            import ipdb; ipdb.set_trace()
-            # pass
-            # cfgs.append(
-            #     dict(
-            #         name="meat",
-            #         obj_groups=["meat_set_train", "bread_set_train"],
-            #         graspable=True,
-            #         max_size=(0.15, 0.15, None),
-            #         obj_registries=("objaverse", "aigen"),
-            #         obj_instance_split=None,
-            #         placement=dict(
-            #             fixture=self.counter,
-            #             sample_region_kwargs=dict(
-            #                 ref=self.sink, loc="left_right", top_size=(0.2, 0.2)
-            #             ),
-            #             pos=("ref", -1.0),
-            #             size=(0.35, 0.45),
-            #         ),
-            #     )
-            # )
-        else:
+        if self.cab_sink is not None:
+            offset = (-0.15, -0.05)
+            size = (0.45, 0.15)
+            if self.layout_id == 8:  # make it reachable for each layout
+                offset = (-0.5, -0.05)
+                size = (0.30, 0.15)
+            if self.layout_id == 9:  # make it reachable for each layout
+                offset = (0.10, -0.05)
+                size = (0.30, 0.15)
             cfgs.append(
                 dict(
                     name="meat",
-                    obj_groups=["meat_set_train", "bread_set_train"],
+                    obj_groups=[f"meat_set_{split_type}", f"bread_set_{split_type}"],
                     graspable=True,
                     max_size=(0.15, 0.15, None),
                     obj_registries=("objaverse", "aigen"),
                     obj_instance_split=None,
                     placement=dict(
                         fixture=self.cab_sink,
-                        size=(0.45, 0.15),
+                        size=size,
                         pos=(0.75, 0.05),
-                        offset=(-0.15, -0.05),
+                        offset=offset,
                     ),
                 )
             )
-        """
+        else:
+            cfgs.append(
+                dict(
+                    name="meat",
+                    obj_groups=f"meat_set_{split_type}",
+                    graspable=True,
+                    max_size=(0.15, 0.15, None),
+                    obj_registries=("objaverse", "aigen"),
+                    obj_instance_split=None,
+                    placement=dict(
+                        fixture=self.counter_sink,
+                        sample_region_kwargs=dict(
+                            ref=self.sink, loc="left_right", top_size=(0.25, 0.3)
+                        ),
+                        size=(0.25, 0.30),
+                        pos=("ref", -1.0),
+                        rotation=[
+                            (np.pi / 2 - np.pi / 16, np.pi / 2 + np.pi / 16),
+                        ],
+                    ),
+                )
+            )
         return cfgs
 
     def _reset_internal(self):
@@ -193,8 +239,9 @@ class SinkEnvForPlay(BaseEnvForPlay):
         Resets simulation internal configurations.
         """
         super()._reset_internal()
-        if self.cab_sink != -1:
+        if self.cab_sink is not None:
             self.cab_sink.set_door_state(min=0.9, max=1.0, env=self, rng=self.rng)
+        self.sink.set_handle_state(mode="off", env=self, rng=self.rng)
 
 
 class StoveEnvForPlay(BaseEnvForPlay):
@@ -215,68 +262,85 @@ class StoveEnvForPlay(BaseEnvForPlay):
 
     def _get_obj_cfgs(self):
         cfgs = []
-        # randomly either placed the packaged item or the vegetable
-        rnd = self.rng.uniform()
-
-        if (rnd < 0.5) or (self.layout_id in [1, 3, 6]):
-            cfgs.append(
-                dict(
-                    name="packed_food",
-                    obj_groups="packaged_food_train",
-                    graspable=True,
-                    obj_registries=("objaverse", "aigen"),
-                    obj_instance_split=None,
-                    placement=dict(
-                        fixture=self.counter_stove,
-                        sample_region_kwargs=dict(
-                            ref=self.stove, loc="left_right", top_size=(0.25, 0.35)
-                        ),
-                        size=(0.25, 0.35),
-                        pos=("ref", -1.0),
-                        rotation=[
-                            (-3 * np.pi / 8, -np.pi / 4),
-                            (np.pi / 4, 3 * np.pi / 8),
-                        ],
-                    ),
-                )
-            )
-        if (rnd > 0.5) or (self.layout_id in [1, 3, 6]):
-            cfgs.append(
-                dict(
-                    name="vegetable",
-                    obj_groups="vegetable_set_train",
-                    graspable=True,
-                    placement=dict(
-                        fixture=self.counter_stove,
-                        size=(1.0, 1.0),
-                        rotation=(np.pi / 2 - np.pi / 8, np.pi / 2 + np.pi / 8),
-                        pos=("ref", -1.0),
-                        try_to_place_in="container_set_train",
-                        container_kwargs=dict(
-                            placement=dict(
-                                fixture=self.counter_stove,
-                                sample_region_kwargs=dict(
-                                    ref=self.stove,
-                                    loc="left_right",
-                                    top_size=(0.35, 0.35),
-                                ),
-                                size=(0.35, 0.55),
-                                pos=("ref", -1.0),
-                            ),
-                        ),
-                    ),
-                )
-            )
+        split_type = self.split_type()
         cfgs.append(
             dict(
-                name="obj",
-                obj_groups="fruit_set_train",
+                name="packed_food",
+                obj_groups=f"packaged_food_{split_type}",
+                graspable=True,
+                obj_registries=("objaverse", "aigen"),
+                obj_instance_split=None,
+                placement=dict(
+                    fixture=self.counter_stove,
+                    sample_region_kwargs=dict(
+                        ref=self.stove, loc="left_right", top_size=(0.25, 0.35)
+                    ),
+                    size=(0.25, 0.35),
+                    pos=("ref", -1.0),
+                    rotation=[
+                        (np.pi / 2 - np.pi / 16, np.pi / 2 + np.pi / 16),
+                    ],
+                ),
+            )
+        )
+        cfgs.append(
+            dict(
+                name="bread",
+                obj_groups=f"bread_set_{split_type}",
+                graspable=True,
+                obj_registries=("objaverse", "aigen"),
+                obj_instance_split=None,
+                placement=dict(
+                    fixture=self.counter_stove,
+                    sample_region_kwargs=dict(
+                        ref=self.stove, loc="left_right", top_size=(0.25, 0.35)
+                    ),
+                    size=(0.25, 0.35),
+                    pos=("ref", -1.0),
+                    rotation=[
+                        (np.pi / 2 - np.pi / 16, np.pi / 2 + np.pi / 16),
+                    ],
+                ),
+            )
+        )
+
+        cfgs.append(
+            dict(
+                name="vegetable",
+                obj_groups=f"vegetable_set_{split_type}",
+                graspable=True,
+                placement=dict(
+                    fixture=self.counter_stove,
+                    size=(1.0, 1.0),
+                    rotation=(np.pi / 2 - np.pi / 8, np.pi / 2 + np.pi / 8),
+                    pos=("ref", -1.0),
+                    try_to_place_in=f"container_set_{split_type}",
+                    container_kwargs=dict(
+                        placement=dict(
+                            fixture=self.counter_stove,
+                            sample_region_kwargs=dict(
+                                ref=self.stove,
+                                loc="left_right",
+                                top_size=(0.35, 0.35),
+                            ),
+                            size=(0.35, 0.35),
+                            pos=("ref", -1.0),
+                        ),
+                    ),
+                ),
+            )
+        )
+        cfgs.append(
+            dict(
+                name="fruit",
+                obj_groups=f"fruit_set_{split_type}",
                 graspable=True,
                 obj_registries=("objaverse", "aigen"),
                 obj_instance_split=None,
                 placement=dict(
                     fixture=self.microwave,
                     size=(0.05, 0.05),
+                    offset=(0.0, -0.10),
                     ensure_object_boundary_in_range=False,
                 ),
             )
@@ -284,7 +348,7 @@ class StoveEnvForPlay(BaseEnvForPlay):
         cfgs.append(
             dict(
                 name="meat",
-                obj_groups="meat_set_train",
+                obj_groups=f"meat_set_{split_type}",
                 graspable=True,
                 max_size=(0.15, 0.15, None),
                 obj_registries=("objaverse", "aigen"),
@@ -293,9 +357,57 @@ class StoveEnvForPlay(BaseEnvForPlay):
                     fixture=self.stove,
                     ensure_object_boundary_in_range=False,
                     size=(0.02, 0.02),
-                    rotation=[(-3 * np.pi / 8, -np.pi / 4), (np.pi / 4, 3 * np.pi / 8)],
                     try_to_place_in="pan",
+                    container_kwargs=dict(  # this will be overriding the placement fixture & rest will be copied
+                        placement=dict(
+                            rotation=[(np.pi / 2 - np.pi / 8, np.pi / 2 + np.pi / 8)],
+                        ),
+                    ),
                 ),
             )
         )
         return cfgs
+
+
+class StoveEnvForPlayTest(StoveEnvForPlay):
+    def split_type(self):
+        return "test"
+
+    def _remove_specific_fixtures(self):
+        remove_keys = []
+        self.fixtures = {
+            key: value for key, value in self.fixtures.items() if key not in remove_keys
+        }
+        self.fixture_cfgs = [
+            elem for elem in self.fixture_cfgs if elem["name"] not in remove_keys
+        ]
+        return
+
+
+class SinkEnvForPlayTestV2(SinkEnvForPlay):
+    def split_type(self):
+        return "test"
+
+    def _remove_specific_fixtures(self):
+        # does not remove any fixtures
+        return
+
+    def _get_obj_cfgs(self):
+        cfgs = super()._get_obj_cfgs()
+        remove_keys = ["bread", "bread_container"]
+        cfgs = [cfg for cfg in cfgs if cfg["name"] not in remove_keys]
+        return cfgs
+
+    def _reset_internal(self):
+        """
+        Resets simulation internal configurations.
+        """
+        super()._reset_internal()
+        if self.cab_sink is not None:
+            self.cab_sink.set_door_state(min=0.0, max=0.1, env=self, rng=self.rng)
+
+
+class SinkEnvForPlayTest(SinkEnvForPlay):
+    # removes all the fixtures like toaster, coffee machine, etc.
+    def split_type(self):
+        return "test"

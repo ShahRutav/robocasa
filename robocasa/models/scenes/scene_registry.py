@@ -27,6 +27,10 @@ class LayoutType(IntEnum):
     DINING = -4
 
 
+PLAY_TRAIN_LAYOUTS = [0, 1, 2, 3, 4, 5, 7, 8]
+
+PLAY_TEST_LAYOUTS = [6, 9]
+
 LAYOUT_GROUPS_TO_IDS = {
     -1: list(range(10)),  # all
     -2: [0, 2, 4, 5, 7],  # no island

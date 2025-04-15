@@ -638,7 +638,12 @@ class Kitchen(ManipulationEnv, metaclass=KitchenEnvMeta):
                     container_kwargs = cfg["placement"].get("container_kwargs", None)
                     if container_kwargs is not None:
                         for k, v in container_kwargs.items():
-                            container_cfg[k] = v
+                            if isinstance(v, dict):
+                                for k2, v2 in v.items():
+                                    container_cfg[k][k2] = v2
+                            else:
+                                container_cfg[k] = v
+                    # print(container_cfg)
 
                     # add in the new object to the model
                     addl_obj_cfgs.append(container_cfg)
@@ -929,14 +934,12 @@ class Kitchen(ManipulationEnv, metaclass=KitchenEnvMeta):
                     + reset_region["offset"][1]
                     + intra_offset[1]
                 )
-                # if cfg["name"] == "plate":
-                #     print("x_range: ", x_range, "y_range: ", y_range)
-                rotation = placement.get("rotation", np.array([-np.pi / 4, np.pi / 4]))
+                rotation = placement.get("rotation", np.array([-np.pi / 8, np.pi / 8]))
             else:
                 target_size = placement.get("size", None)
                 x_range = np.array([-target_size[0] / 2, target_size[0] / 2])
                 y_range = np.array([-target_size[1] / 2, target_size[1] / 2])
-                rotation = placement.get("rotation", np.array([-np.pi / 4, np.pi / 4]))
+                rotation = placement.get("rotation", np.array([-np.pi / 8, np.pi / 8]))
                 ref_pos = [0, 0, 0]
                 ref_rot = 0.0
 
