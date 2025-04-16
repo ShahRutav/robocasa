@@ -36,6 +36,7 @@ class CoffeeMachine(Accessory):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self._turned_on = False
+        self._counter = 15
         # site where coffee liquid is poured
         self._receptacle_pouring_site = self.worldbody.find(
             "./body/body/site[@name='{}{}']".format(
@@ -83,8 +84,20 @@ class CoffeeMachine(Accessory):
             env.robots[0].gripper["right"], "{}_start_button".format(self.name)
         )
 
-        if self._turned_on is False and start_button_pressed:
+        print("start_button_pressed", start_button_pressed)
+
+        if self._turned_on is False and start_button_pressed and self._counter <= 0:
             self._turned_on = True
+            self._counter = 5
+        elif self._turned_on is True and start_button_pressed and self._counter <= 0:
+            self._turned_on = False
+            self._counter = 5
+
+        if start_button_pressed:
+            self._counter -= 1
+        
+
+        print("turned_on", self._turned_on)
 
         for site_name in self._coffee_liquid_site_names:
             site_id = env.sim.model.site_name2id(site_name)
