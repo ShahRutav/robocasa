@@ -265,7 +265,7 @@ main_group:
       type: coffee_machine
 
       placement:
-        fixture: counter_main
+        fixture: counter_right
         sample_region_kwargs:
           ref: cab_1
         size: [1.0, 0.52]
@@ -273,14 +273,14 @@ main_group:
         rotation: [0, 0]
         margin: 0.0
 
-    - name: toaster
-      type: toaster
+    # - name: toaster
+    #   type: toaster
 
-      placement:
-        fixture: counter_right
-        size: [1.0, 0.40]
-        pos: [null, 1.0]
-        rotation: [0, 0]
+    #   placement:
+    #     fixture: counter_right
+    #     size: [1.0, 0.40]
+    #     pos: [null, 1.0]
+    #     rotation: [0, 0]
 
     - name: knife_block
       type: knife_block

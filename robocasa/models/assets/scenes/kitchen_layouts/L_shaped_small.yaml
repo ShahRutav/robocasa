@@ -47,46 +47,6 @@ room:
       size: [2.6, 2.6, 0.1]
       pos: [2.6, -2.6, 0]
 
-  # Wall accessories (e.g. outlets, clocks, paintings)
-  wall_accessories:
-    - name: outlet
-      type: wall_accessory
-      
-      attach_to: wall
-      pos: [4.55, null, 1.2]
-
-    - name: light_switch
-      type: wall_accessory
-      config_name: light_switch
-      
-      attach_to: wall
-      pos: [1.8, null, 1.2]
-
-    - name: light_switch_2
-      type: wall_accessory
-      config_name: light_switch
-      
-      attach_to: wall
-      pos: [1.9, null, 1.2]
-
-    - name: utensil_rack
-      type: utensil_rack
-      
-      attach_to: wall
-      pos: [4.05, null, 1.2]
-    
-    - name: outlet_2
-      type: wall_accessory
-      
-      attach_to: wall_right
-      pos: [null, -3, 1.2]
-
-    # - name: pan_rack
-    #   type: wall_accessory
-    #   config_name: pan_rack
-      
-    #   attach_to: wall_right
-    #   pos: [null, -2.3, 1.2]
 
 # fixtures on the main wall
 main_group:
@@ -202,38 +162,17 @@ main_group:
 
   # Decorations on counters
   counter_accessories:
-    - name: plant
-      type: plant
+    - name: microwave
+      type: microwave
+      size: [0.45, 0.2, 0.2]
 
       placement:
         fixture: counter_main
-        sample_region_kwargs:
-          ref: cab_1_main_group
         size: [1.0, 0.25]
-        pos: [null, 1.0]
+        pos: [1.0, 1.0]
         rotation: [0, 0]
 
-    - name: knife_block
-      type: knife_block
 
-      placement:
-        fixture: counter_corner_main
-        # sample_region_kwargs:
-        #   ref: cab_main
-        size: [obj.y, 0.30]
-        pos: [1.0, -1.0]
-        rotation: [-1.57, -1.57]
-
-    - name: paper_towel
-      type: paper_towel
-
-      placement:
-        fixture: counter_corner_main
-        # sample_region_kwargs:
-        #   ref: cab_main
-        size: [0.40, 0.30]
-        pos: [-1.0, 1.0]
-        rotation: [0, 0]
 
 # fixtures on the right wall
 right_group:

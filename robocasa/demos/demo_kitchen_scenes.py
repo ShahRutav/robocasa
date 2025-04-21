@@ -114,9 +114,15 @@ if __name__ == "__main__":
     env_info = json.dumps(config)
 
     # initialize device
-    from robosuite.devices import Keyboard
+    from robosuite.devices import SpaceMouse
 
-    device = Keyboard(env=env, pos_sensitivity=4.0, rot_sensitivity=4.0)
+    device = SpaceMouse(
+        env=env,
+        pos_sensitivity=4.0,
+        rot_sensitivity=4.0,
+        # vendor_id=macros.SPACEMOUSE_VENDOR_ID,
+        # product_id=macros.SPACEMOUSE_PRODUCT_ID,
+    )
 
     # collect demonstrations
     while True:

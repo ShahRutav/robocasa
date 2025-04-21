@@ -20,6 +20,11 @@ class HeatMug(Kitchen):
         self.microwave = self.register_fixture_ref(
             "microwave", dict(id=FixtureType.MICROWAVE)
         )
+
+        self.toaster = self.register_fixture_ref(
+            "cab_main33", dict(id="cab_main33")
+        )
+
         self.cab = self.register_fixture_ref(
             "cab", dict(id=FixtureType.CABINET_TOP, ref=self.microwave)
         )
@@ -38,6 +43,7 @@ class HeatMug(Kitchen):
         """
         super()._reset_internal()
         self.cab.set_door_state(min=0.90, max=1.0, env=self, rng=self.rng)
+        self.toaster.set_door_state(min=0.90, max=1.0, env=self, rng=self.rng)
         self.microwave.set_door_state(min=0.90, max=1.0, env=self, rng=self.rng)
 
     def _get_obj_cfgs(self):
@@ -72,7 +78,8 @@ class HeatMug(Kitchen):
 
     def _check_success(self):
         gripper_obj_far = OU.gripper_obj_far(self)
-        obj_in_microwave = OU.obj_inside_of(self, "obj", self.microwave)
+        obj_in_microwave = OU.is_on_top_of(self, "obj", self.toaster)
+        print(obj_in_microwave)
         door_state = self.microwave.get_door_state(self)["door"]
         door_closed = door_state <= 0.005
 

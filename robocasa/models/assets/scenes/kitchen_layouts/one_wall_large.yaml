@@ -89,11 +89,6 @@ room:
       attach_to: wall
       pos: [3.6, null, 1.2]
 
-    - name: utensil_rack
-      type: utensil_rack
-      
-      attach_to: wall
-      pos: [2.75, null, 1.3]
 
 # fixtures on the main wall
 main_group:
@@ -265,50 +260,54 @@ main_group:
 
   # Decorations on counters
   counter_accessories:
-    - name: knife_block
-      type: knife_block
+    # - name: knife_block
+    #   type: knife_block
 
-      placement:
-        fixture: counter_main
-        sample_region_kwargs:
-          ref: cab_main
-        size: [1.0, obj]
-        pos: [null, 1.0]
-        rotation: [0, 0]
+    #   placement:
+    #     fixture: counter_main
+    #     sample_region_kwargs:
+    #       ref: cab_main
+    #     size: [1.0, obj]
+    #     pos: [null, 1.0]
+    #     rotation: [0, 0]
 
-    - name: toaster
-      type: toaster
+    - name: cab_main33
+      type: hinge_cabinet
+      default_config_name: cab_top
 
-      placement:
-        fixture: counter_2
-        sample_region_kwargs:
-          ref: shelves
-        size: [1.0, 0.40]
-        pos: [null, 1.0]
-        rotation: [0, 0]
-
-    - name: paper_towel
-      type: paper_towel
+      size: [0.5, 0.60, 0.45]
+      pos: [1.75, 2, 1.85]
 
       placement:
         fixture: counter_2
         sample_region_kwargs:
           ref: shelves
-        size: [1.0, 0.40]
-        pos: [null, 1.0]
+        size: [2, 2]
+        pos: [null, 2.0]
         rotation: [0, 0]
 
-    - name: coffee_machine
-      type: coffee_machine
+    # - name: paper_towel
+    #   type: paper_towel
 
-      placement:
-        fixture: counter_2
-        sample_region_kwargs:
-          ref: cab_2
-        size: [1.0, 0.52]
-        pos: [null, 1.0]
-        rotation: [0, 0]
-        margin: 0.0
+    #   placement:
+    #     fixture: counter_2
+    #     sample_region_kwargs:
+    #       ref: shelves
+    #     size: [1.0, 0.40]
+    #     pos: [null, 1.0]
+    #     rotation: [0, 0]
+
+    # - name: coffee_machine
+    #   type: coffee_machine
+
+    #   placement:
+    #     fixture: counter_2
+    #     sample_region_kwargs:
+    #       ref: cab_2
+    #     size: [1.0, 0.52]
+    #     pos: [null, 1.0]
+    #     rotation: [0, 0]
+    #     margin: 0.0
 
 
 island_group:

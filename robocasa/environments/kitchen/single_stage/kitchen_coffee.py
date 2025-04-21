@@ -138,6 +138,73 @@ class CoffeePressButton(Kitchen):
         """
         super()._setup_kitchen_references()
         self.coffee_machine = self.get_fixture("coffee_machine")
+        print(self.coffee_machine)
+        self.counter = self.get_fixture(FixtureType.COUNTER, ref=self.coffee_machine)
+        self.init_robot_base_pos = self.coffee_machine
+
+    def get_ep_meta(self):
+        """
+        Get the episode metadata for the coffee press button task.
+        This includes the language description of the task.
+
+        Returns:
+            dict: Episode metadata.
+        """
+        ep_meta = super().get_ep_meta()
+        ep_meta["lang"] = "press the button on the coffee machine to serve coffee"
+        return ep_meta
+
+    def _get_obj_cfgs(self):
+        """
+        Get the object configurations for the coffee press button task. This includes the object placement configurations.
+        Places the mug under the coffee machine dispenser.
+
+        Returns:
+            list: List of object configurations.
+        """
+        cfgs = []
+        cfgs.append(
+            dict(
+                name="obj",
+                obj_groups="mug",
+                placement=dict(
+                    fixture=self.coffee_machine,
+                    ensure_object_boundary_in_range=False,
+                    margin=0.0,
+                    ensure_valid_placement=False,
+                    rotation=(np.pi / 8, np.pi / 4),
+                ),
+            )
+        )
+
+        return cfgs
+
+    def _check_success(self):
+        """
+        Check if the coffee press button task is successful.
+        This includes checking if the gripper is far from the object and the coffee machine is turned on/button has been pressed.
+        """
+        gripper_button_far = self.coffee_machine.gripper_button_far(self)
+
+        turned_on = self.coffee_machine.get_state()["turned_on"]
+        return turned_on and gripper_button_far
+
+
+class CabinetOnCoffee(Kitchen):
+    """
+    Class encapsulating the coffee press button task. Press the button on the coffee machine to serve coffee.
+    """
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
+    def _setup_kitchen_references(self):
+        """
+        Setup the kitchen references for the coffee press button task. (Coffee machine and counter the coffee machine is on)
+        """
+        super()._setup_kitchen_references()
+        self.coffee_machine = self.get_fixture("coffee_machine")
+        print(self.coffee_machine)
         self.counter = self.get_fixture(FixtureType.COUNTER, ref=self.coffee_machine)
         self.init_robot_base_pos = self.coffee_machine
 
