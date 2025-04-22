@@ -191,8 +191,6 @@ def download_kitchen_assets():
         return
 
     for ds_name, config in DOWNLOAD_ASSET_REGISTRY.items():
-        if ds_name == "aigen_objs":
-            continue  # skip for now, too large to download initially
         download_and_extract_zip(**config)
 
 
