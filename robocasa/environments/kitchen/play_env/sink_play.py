@@ -2,24 +2,6 @@ import os
 from robocasa.environments.kitchen.kitchen import *
 import robocasa.utils.object_utils as OU
 
-PLAY_TASK_NAME_TO_CLASS = {
-    "turn_on_faucet": "TurnOnFaucetDebug",
-    "turn_off_faucet": "TurnOffFaucetDebug",
-    "close_cabinet": "CloseCabDebug",
-    "open_cabinet": "OpenCabDebug",
-    "pnp_sink_to_plate": "PnPSinkToPlateDebug",
-    "pnp_plate_to_sink": "PnPPlateToSinkDebug",
-    "pnp_counter_to_plate": "PnPCounterToPlateDebug",
-    "pnp_counter_to_cabinet": "PnPCounterToCabDebug",
-    "pnp_counter_to_sink": "PnPCounterToSinkDebug",
-    "l1_pnp_sink_to_plate": "SinkPlayEnv_PnPSinkToPlayL1",
-    "l2_pnp_sink_to_plate": "SinkPlayEnv_PnPSinkToPlayL2",
-    "l3_pnp_sink_to_plate": "SinkPlayEnv_PnPSinkToPlayL3",
-    "l1_pnp_plate_to_sink": "SinkPlayEnv_PnPPlateToSinkL1",
-    "l2_pnp_plate_to_sink": "SinkPlayEnv_PnPPlateToSinkL2",
-    "l3_pnp_plate_to_sink": "SinkPlayEnv_PnPPlateToSinkL3",
-}
-
 # copied from ArrangeVegetables
 class SinkBase(Kitchen):
     """

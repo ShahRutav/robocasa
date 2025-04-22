@@ -397,17 +397,7 @@ class Kitchen(ManipulationEnv, metaclass=KitchenEnvMeta):
         """
         Loads an xml model, puts it in self.model
         """
-        # check if there is RAM memory increase with index. print the ram usage
-        # if ind > 0:
-        #     print("cleanup memory")
-        #     self._cleanup_model_memory()
-        # import psutil
-        # process = psutil.Process(os.getpid())
-        # mem_before = process.memory_info().rss / (1024 ** 2)  # in MB
-        # print(f"[Before] Memory usage: {mem_before:.2f} MB for index {ind}")
-
         super()._load_model()
-
         while True:
             for robot in self.robots:
                 if isinstance(robot.robot_model, PandaOmron):

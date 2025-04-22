@@ -10,7 +10,7 @@ room:
 
     - name: wall_backing
       type: wall
-      
+
       backing: true
       backing_extended: [true, true]
       size: [3.1, 1.5, 0.1]
@@ -41,7 +41,7 @@ room:
 
     - name: wall_left_backing
       type: wall
-      
+
       backing: true
       wall_side: left
       size: [1.7, 1.5, 0.1]
@@ -56,7 +56,7 @@ room:
 
     - name: wall_2_left_backing
       type: wall
-      
+
       backing: true
       wall_side: left
       size: [0.525, 1.5, 0.1]
@@ -71,13 +71,13 @@ room:
 
     - name: wall_right_backing
       type: wall
-      
+
       backing: true
       wall_side: right
       size: [2.25, 1.5, 0.1]
       pos: [5.9, -2.25, 1.5]
 
-  wall_accessories:    
+  wall_accessories:
     - name: utensil_rack
       type: utensil_rack
       attach_to: wall
@@ -109,7 +109,7 @@ room:
       config_name: light_switch
       attach_to: wall_left_2
       pos: [null, -3.7, 1.2]
-  
+
   # Floor
   floor:
     - name: floor
@@ -121,7 +121,7 @@ room:
 
     - name: floor_backing
       type: floor
-      
+
       backing: true
       size: [2.95, 1.425, 0.1]
       pos: [2.95, -1.425, 0]
@@ -152,7 +152,7 @@ main_group:
 
     - name: stove
       type: stove
-      
+
       size: [null, 0.66, null]
       align_to: counter_main
       side: right
@@ -193,7 +193,7 @@ main_group:
     - name: cab_1
       type: hinge_cabinet
       default_config_name: cab_top
-      
+
       size: [1, 0.4, 0.92]
       align_to: cab_main
       side: right
@@ -422,7 +422,7 @@ left_group:
       side: right
       alignment: bottom_back
 
-      
+
 # fixtures on the right wall
 right_group:
   # rotation and displacement of the group
@@ -452,7 +452,7 @@ right_group:
       size: [0.10, 0.65, 0.92]
       align_to: counter_1
       side: left
- 
+
   # Cabinets built into counters
   bottom_row_cabinets:
     - name: stack_1
@@ -501,7 +501,7 @@ right_group:
 
     - name: window_group
       type: framed_window
-      
+
       size: [1.85, 0.05, 1.25]
       num_windows: 3
       align_to: cab_1
@@ -536,7 +536,7 @@ front_group:
 
       size: [1.575, 0.65, 0.92]
       pos: [-0.4875, -0.325, 0.46]
- 
+
   # Cabinets built into counters
   bottom_row_cabinets:
     - name: stack_1
@@ -611,7 +611,7 @@ front_group:
       stack_height: 2.45
       stack_fixtures: ["bottom", "cab_middle", "micro_housing"]
 
-island_group: 
+island_group:
   # rotation and displacement of the group
   group_origin: [0, 0]
   group_pos: [4, -2.55]

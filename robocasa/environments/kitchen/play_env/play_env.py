@@ -88,6 +88,18 @@ class SinkEnvForPlay(BaseEnvForPlay):
         self.init_robot_base_pos = self.sink
         return
 
+    @property
+    def fruit_container_counter_loc(self):
+        return "left_right"
+
+    @property
+    def bread_container_counter_loc(self):
+        return "left_right"
+
+    @property
+    def packed_food_counter_loc(self):
+        return "left_right"
+
     def _get_obj_cfgs(self):
         split_type = self.split_type()
         cfgs = []
@@ -108,7 +120,9 @@ class SinkEnvForPlay(BaseEnvForPlay):
                         placement=dict(
                             fixture=self.counter_sink,
                             sample_region_kwargs=dict(
-                                ref=self.sink, loc="left_right", top_size=(0.25, 0.25)
+                                ref=self.sink,
+                                loc=self.fruit_container_counter_loc,
+                                top_size=(0.25, 0.25),
                             ),
                             size=(0.35, 0.35),
                             pos=("ref", -1.0),
@@ -117,32 +131,35 @@ class SinkEnvForPlay(BaseEnvForPlay):
                 ),
             )
         )
-        cfgs.append(
-            dict(
-                name="bread",
-                obj_groups=f"bread_set_{split_type}",
-                obj_registries=("objaverse", "aigen"),
-                obj_instance_split=None,
-                graspable=True,
-                placement=dict(
-                    fixture=self.counter_sink,
-                    size=(1.0, 1.0),
-                    rotation=(np.pi / 2 - np.pi / 8, np.pi / 2 + np.pi / 8),
-                    pos=("ref", -1.0),
-                    try_to_place_in=f"container_set_{split_type}",
-                    container_kwargs=dict(
-                        placement=dict(
-                            fixture=self.counter_sink,
-                            sample_region_kwargs=dict(
-                                ref=self.sink, loc="left_right", top_size=(0.25, 0.25)
+        if self.layout_id not in [7]:
+            cfgs.append(
+                dict(
+                    name="bread",
+                    obj_groups=f"bread_set_{split_type}",
+                    obj_registries=("objaverse", "aigen"),
+                    obj_instance_split=None,
+                    graspable=True,
+                    placement=dict(
+                        fixture=self.counter_sink,
+                        size=(1.0, 1.0),
+                        rotation=(np.pi / 2 - np.pi / 8, np.pi / 2 + np.pi / 8),
+                        pos=("ref", -1.0),
+                        try_to_place_in=f"container_set_{split_type}",
+                        container_kwargs=dict(
+                            placement=dict(
+                                fixture=self.counter_sink,
+                                sample_region_kwargs=dict(
+                                    ref=self.sink,
+                                    loc=self.bread_container_counter_loc,
+                                    top_size=(0.25, 0.25),
+                                ),
+                                size=(0.35, 0.35),
+                                pos=("ref", -1.0),
                             ),
-                            size=(0.35, 0.35),
-                            pos=("ref", -1.0),
                         ),
                     ),
-                ),
+                )
             )
-        )
         cfgs.append(
             dict(
                 name="packed_food",
@@ -153,7 +170,9 @@ class SinkEnvForPlay(BaseEnvForPlay):
                 placement=dict(
                     fixture=self.counter_sink,
                     sample_region_kwargs=dict(
-                        ref=self.sink, loc="left_right", top_size=(0.25, 0.35)
+                        ref=self.sink,
+                        loc=self.packed_food_counter_loc,
+                        top_size=(0.25, 0.35),
                     ),
                     size=(0.25, 0.35),
                     pos=("ref", -1.0),
@@ -242,6 +261,80 @@ class SinkEnvForPlay(BaseEnvForPlay):
         if self.cab_sink is not None:
             self.cab_sink.set_door_state(min=0.9, max=1.0, env=self, rng=self.rng)
         self.sink.set_handle_state(mode="off", env=self, rng=self.rng)
+
+
+class PnPRightCounterPlateToSink(SinkEnvForPlay):
+    @property
+    def fruit_container_counter_loc(self):
+        return "right"
+
+    @property
+    def bread_container_counter_loc(self):
+        return "left"
+
+    def set_ep_meta(self, ep_meta):
+        ## here we will overrite the object_cfgs if present in the ep_meta. specifically overrite the fruit_container_counter_loc and bread_container_counter_loc
+        if "object_cfgs" in ep_meta:
+            for obj_cfg in ep_meta["object_cfgs"]:
+                if obj_cfg["name"] == "fruit_container":
+                    obj_cfg["placement"]["sample_region_kwargs"][
+                        "loc"
+                    ] = self.fruit_container_counter_loc
+                if obj_cfg["name"] == "bread_container":
+                    obj_cfg["placement"]["sample_region_kwargs"][
+                        "loc"
+                    ] = self.bread_container_counter_loc
+        super().set_ep_meta(ep_meta)
+        return ep_meta
+
+    def _check_success(self):
+        obj_name = "fruit"
+        is_in = OU.check_obj_fixture_contact(self, obj_name, self.sink)
+        return is_in and OU.gripper_obj_far(self, obj_name=obj_name)
+
+
+class PnPSinkToRightCounterPlate(SinkEnvForPlay):
+    @property
+    def fruit_container_counter_loc(self):
+        return "right"
+
+    @property
+    def bread_container_counter_loc(self):
+        return "left"
+
+    def _check_success(self):
+        obj_name = "vegetable"
+        tar_name = "fruit_container"
+        is_in = OU.check_obj_in_receptacle(self, obj_name, tar_name)
+        is_tar_contact = OU.check_obj_fixture_contact(self, tar_name, self.counter_sink)
+        return is_in and OU.gripper_obj_far(self, obj_name=obj_name) and is_tar_contact
+
+    def set_ep_meta(self, ep_meta):
+        ## here we will overrite the object_cfgs if present in the ep_meta. specifically overrite the fruit_container_counter_loc and bread_container_counter_loc
+        if "object_cfgs" in ep_meta:
+            for obj_cfg in ep_meta["object_cfgs"]:
+                if obj_cfg["name"] == "fruit_container":
+                    obj_cfg["placement"]["sample_region_kwargs"][
+                        "loc"
+                    ] = self.fruit_container_counter_loc
+                if obj_cfg["name"] == "bread_container":
+                    obj_cfg["placement"]["sample_region_kwargs"][
+                        "loc"
+                    ] = self.bread_container_counter_loc
+        super().set_ep_meta(ep_meta)
+        return ep_meta
+
+
+class CloseRightCabinetDoor(SinkEnvForPlay):
+    def _check_success(self):
+        cab_state = self.cab_sink.get_door_state(self)
+        return cab_state["right_door"] < 0.1
+
+
+class CloseLeftCabinetDoor(SinkEnvForPlay):
+    def _check_success(self):
+        cab_state = self.cab_sink.get_door_state(self)
+        return cab_state["left_door"] < 0.1
 
 
 class StoveEnvForPlay(BaseEnvForPlay):

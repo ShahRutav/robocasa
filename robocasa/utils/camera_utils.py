@@ -56,6 +56,16 @@ CAM_CONFIGS = dict(
             ],
             parent_body="mobilebase0_support",
         ),
+        robot0_agentview_center_top=dict(
+            pos=[-0.65, 0.0, 1.10],
+            quat=[
+                0.5598360158095542,
+                0.45039127849906346,
+                -0.43425647518377763,
+                -0.543279336326371,
+            ],
+            parent_body="mobilebase0_support",
+        ),
         robot0_agentview_left=dict(
             pos=[-0.5, 0.35, 1.05],
             quat=[0.55623853, 0.29935253, -0.37678665, -0.6775092],
