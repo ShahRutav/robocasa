@@ -337,6 +337,20 @@ class CloseLeftCabinetDoor(SinkEnvForPlay):
         return cab_state["left_door"] < 0.1
 
 
+class PnPCabinetToSink(SinkEnvForPlay):
+    def _check_success(self):
+        obj_name = "meat"
+        is_tar_contact = OU.check_obj_fixture_contact(self, obj_name, self.sink)
+        return is_tar_contact and OU.gripper_obj_far(self, obj_name=obj_name)
+
+
+class PnPSinkToCabinet(SinkEnvForPlay):
+    def _check_success(self):
+        obj_name = "vegetable"
+        is_tar_contact = OU.check_obj_fixture_contact(self, obj_name, self.cab_sink)
+        return is_tar_contact
+
+
 class StoveEnvForPlay(BaseEnvForPlay):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
