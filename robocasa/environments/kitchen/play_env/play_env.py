@@ -337,6 +337,16 @@ class CloseLeftCabinetDoor(SinkEnvForPlay):
         return cab_state["left_door"] < 0.1
 
 
+class OpenRightCabinetDoor(SinkEnvForPlay):
+    def _check_success(self):
+        cab_state = self.cab_sink.get_door_state(self)
+        return cab_state["right_door"] > 0.5
+
+    def _reset_internal(self):
+        super()._reset_internal()
+        self.cab_sink.set_door_state(min=0.0, max=0.1, env=self, rng=self.rng)
+
+
 class PnPCabinetToSink(SinkEnvForPlay):
     def _check_success(self):
         obj_name = "meat"
@@ -349,6 +359,127 @@ class PnPSinkToCabinet(SinkEnvForPlay):
         obj_name = "vegetable"
         is_tar_contact = OU.check_obj_fixture_contact(self, obj_name, self.cab_sink)
         return is_tar_contact
+
+
+class TurnOnFaucet(SinkEnvForPlay):
+    def _reset_internal(self):
+        super()._reset_internal()
+        self.init_handle_state = self.sink.get_handle_state(self)
+
+    def _check_success(self):
+        handle_state = self.sink.get_handle_state(self)
+        if handle_state["handle_joint"] - self.init_handle_state["handle_joint"] > 0.05:
+            return True
+        water_on = handle_state["water_on"]
+        return water_on
+
+
+class PnPLeftCounterPlateToSink(SinkEnvForPlay):
+    def set_ep_meta(self, ep_meta):
+        if "style_id" in ep_meta:
+            ep_meta["style_id"] = "004_l2"
+        if "object_cfgs" in ep_meta:
+            for obj_cfg in ep_meta["object_cfgs"]:
+                if obj_cfg["name"] == "bread_container":
+                    obj_cfg["placement"]["sample_region_kwargs"]["loc"] = "left"
+                if obj_cfg["name"] == "fruit_container":
+                    obj_cfg["placement"]["sample_region_kwargs"]["loc"] = "right"
+                if obj_cfg["name"] == "bread_container":
+                    obj_cfg["placement"]["size"] = (0.25, 0.35)
+            ep_meta["object_cfgs"] = [
+                obj_cfg
+                for obj_cfg in ep_meta["object_cfgs"]
+                if ((obj_cfg["name"] != "packed_food") and (obj_cfg["name"] != "meat"))
+            ]  # remove random collisionsA
+        return super().set_ep_meta(ep_meta)
+
+    def _check_success(self):
+        obj_name = "bread"
+        tar_name = "vegetable_container"
+        is_in = OU.check_obj_in_receptacle(self, obj_name, tar_name)
+        is_tar_contact = OU.check_obj_fixture_contact(self, tar_name, self.sink)
+        return is_in and is_tar_contact
+
+
+class TurnOnFaucetL2(TurnOnFaucet):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        assert self.style_id == "000_l2"
+
+    def set_ep_meta(self, ep_meta):
+        if "style_id" in ep_meta:
+            ep_meta["style_id"] = "000_l2"
+        return super().set_ep_meta(ep_meta)
+
+
+class PnPSinkToRightCounterPlateL2(PnPRightCounterPlateToSink):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        assert self.style_id == "001_l2"
+
+    def set_ep_meta(self, ep_meta):
+        if "style_id" in ep_meta:
+            ep_meta["style_id"] = "001_l2"
+
+        if "object_cfgs" in ep_meta:  ## overriting
+            for obj_cfg in ep_meta["object_cfgs"]:
+                if obj_cfg["name"] == "vegetable":
+                    obj_cfg["obj_groups"] = "vegetable_set_test"
+        return super().set_ep_meta(ep_meta)
+
+
+class CloseLeftCabinetDoorL2(CloseLeftCabinetDoor):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        assert self.style_id == "002_l2"
+
+    def set_ep_meta(self, ep_meta):
+        if "style_id" in ep_meta:
+            ep_meta["style_id"] = "002_l2"
+        return super().set_ep_meta(ep_meta)
+
+
+class PnPSinkToCabinetL2(PnPSinkToCabinet):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        assert self.style_id == "003_l2"
+
+    def set_ep_meta(self, ep_meta):
+        if "style_id" in ep_meta:
+            ep_meta["style_id"] = "003_l2"
+        if "object_cfgs" in ep_meta:  ## overriting
+            for obj_cfg in ep_meta["object_cfgs"]:
+                if obj_cfg["name"] == "vegetable":
+                    obj_cfg["obj_groups"] = "vegetable_set_test"
+        return super().set_ep_meta(ep_meta)
+
+
+class PnPLeftCounterPlateToSinkL2(PnPLeftCounterPlateToSink):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        assert self.style_id == "004_l2"
+
+    def set_ep_meta(self, ep_meta):
+        if "style_id" in ep_meta:
+            ep_meta["style_id"] = "004_l2"
+        if "object_cfgs" in ep_meta:  ## overriting
+            for obj_cfg in ep_meta["object_cfgs"]:
+                if obj_cfg["name"] == "vegetable_container":
+                    obj_cfg["obj_groups"] = "vegetable_set_test"
+                if obj_cfg["name"] == "bread":
+                    obj_cfg["obj_groups"] = "bread_set_test"
+        return super().set_ep_meta(ep_meta)
+
+
+class OpenRightCabinetDoorL2(OpenRightCabinetDoor):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        assert self.style_id == "005_l2"
+
+    def set_ep_meta(self, ep_meta):
+        if "style_id" in ep_meta:
+            ep_meta["style_id"] = "005_l2"
+        return super().set_ep_meta(ep_meta)
 
 
 class StoveEnvForPlay(BaseEnvForPlay):

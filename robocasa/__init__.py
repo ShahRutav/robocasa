@@ -312,6 +312,14 @@ PLAY_TASK_NAME_TO_CLASS = {
     "CloseLeftCabinetDoor": "CloseLeftCabinetDoor",
     "PnPCabinetToSink": "PnPCabinetToSink",
     "PnPSinkToCabinet": "PnPSinkToCabinet",
+    "TurnOnFaucet": "TurnOnFaucet",
+    "PnPLeftCounterPlateToSink": "PnPLeftCounterPlateToSink",
+    "TurnOnFaucetL2": "TurnOnFaucetL2",
+    "PnPSinkToRightCounterPlateL2": "PnPSinkToRightCounterPlateL2",
+    "CloseLeftCabinetDoorL2": "CloseLeftCabinetDoorL2",
+    "PnPSinkToCabinetL2": "PnPSinkToCabinetL2",
+    "PnPLeftCounterPlateToSinkL2": "PnPLeftCounterPlateToSinkL2",
+    "OpenRightCabinetDoorL2": "OpenRightCabinetDoorL2",
 }
 
 try:

@@ -1,32 +1,30 @@
 cabinet:
   default:
-  - lighter_gray
-  - shaker
-  - handle_black
+  - dark_gray
+  - handle_brass
   - handle_boxed
-  shelves: wood_grain_shelves_2
+  shelves: warm_wood_parquet
 counter:
-  default: white_base_marble_top_2
-  island: white_base_marble_top_2
-floor: dark_wood_planks
-wall: diamond_marble_parquet
+  default: warm_wood_base_granite_top
+  island: warm_wood_base_granite_top
+floor: wood_2
+wall: diamond_tiles
 sink: concrete_sink
 stove: frigidaire_gas
-microwave: hamilton_beach
-oven: beko
+microwave: gray
+oven: gorenje_dark
 stovetop: pack_1_top_induc
-hood: tall_stainless
-fridge: modern
-dishwasher: basic_stainless
+hood: pack_2
+fridge: pack_2
+dishwasher: pack_2
 accessory: default
-coffee_machine: nespresso
-toaster: basic_popup
+coffee_machine: delonghi_espresso_2
 wall_accessory: default
-knife_block: knife_block_1
-paper_towel: holder_2
-stool: stool_1_2
-utensil_rack: metal_cg_2
-utensil_holder: holder_2
+knife_block: light_wood_3
+paper_towel: holder_4
+stool: stool_1_3
+utensil_rack: metal
+utensil_holder: holder_3
 box: default
 window: default
 framed_window: default

@@ -1,22 +1,23 @@
 cabinet:
   default:
-  - raised
-  - white
+  - dark_gray
+  - handle_brass
+  - handle_boxed
   cab_top:
   - divided_window
-  - white
+  - dark_gray
   cab_top_small:
   - raised
-  - white
+  - dark_gray
   shelves: warm_wood_parquet
 counter:
   default: white_base_marble_top
   island: warm_wood_base_marble_top
 floor: warm_wood
 wall: varied_marble_tiles
-sink: 1_bin_wide_top_handle
-stove: square_gas
-microwave: gray
+sink: 2_bins_stainless
+stove: basic_sleek_induc
+microwave: hamilton_beach
 oven: gorenje
 stovetop: pack_1_top_gas
 hood: simple_silver

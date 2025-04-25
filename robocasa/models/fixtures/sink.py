@@ -87,7 +87,7 @@ class Sink(Fixture):
         if handle_joint_qpos < 0:
             handle_joint_qpos += 2 * np.pi
         handle_state["handle_joint"] = handle_joint_qpos
-        handle_state["water_on"] = 0.40 < handle_joint_qpos < np.pi
+        handle_state["water_on"] = 0.30 < handle_joint_qpos < np.pi
 
         spout_joint_id = env.sim.model.joint_name2id(
             "{}spout_joint".format(self.naming_prefix)
