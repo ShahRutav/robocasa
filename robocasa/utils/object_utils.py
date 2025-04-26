@@ -346,7 +346,7 @@ def check_obj_fixture_contact(env, obj_name, fixture_name):
     return env.check_contact(obj, fixture)
 
 
-def gripper_obj_far(env, obj_name="obj", th=0.25):
+def gripper_obj_far(env, obj_name="obj", th=0.10):
     """
     check if gripper is far from object based on distance defined by threshold
     """

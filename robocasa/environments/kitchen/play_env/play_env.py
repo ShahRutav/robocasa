@@ -412,7 +412,7 @@ class TurnOnFaucetL2(TurnOnFaucet):
         return super().set_ep_meta(ep_meta)
 
 
-class PnPSinkToRightCounterPlateL2(PnPRightCounterPlateToSink):
+class PnPSinkToRightCounterPlateL2(PnPSinkToRightCounterPlate):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         assert self.style_id == "001_l2"
