@@ -492,6 +492,42 @@ class CloseRightCabinetDoorL2(CloseRightCabinetDoor):
         return super().set_ep_meta(ep_meta)
 
 
+class PnPSinkToRightCounterPlateL3(PnPSinkToRightCounterPlate):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
+    def split_type(self):
+        return "test"
+
+    # def _reset_internal(self):
+
+    def set_ep_meta(
+        self, ep_meta
+    ):  # taken cared by the @split_type in the meta file generation
+        if "object_cfgs" in ep_meta:  ## overriting
+            for obj_cfg in ep_meta["object_cfgs"]:
+                if obj_cfg["name"] == "vegetable_container":
+                    obj_cfg["obj_groups"] = "container_set_train"
+                    obj_cfg["placement"]["offset"] = (0.05, 0.0)
+                    obj_cfg["info"]["groups_containing_sampled_obj"] = ["plate"]
+                    obj_cfg["info"]["cat"] = ["plate"]
+                    obj_cfg["info"][
+                        "groups"
+                    ] = "/home/rutavms/research/gaze/robocasa/robocasa/models/assets/objects/objaverse/plate/plate_1/model.xml"
+                    obj_cfg["info"][
+                        "mjcf_path"
+                    ] = "/home/rutavms/research/gaze/robocasa/robocasa/models/assets/objects/objaverse/plate/plate_1/model.xml"
+        return super().set_ep_meta(ep_meta)
+
+
+class CloseLeftCabinetDoorL3(CloseLeftCabinetDoor):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
+    def set_ep_meta(self, ep_meta):
+        return super().set_ep_meta(ep_meta)
+
+
 class StoveEnvForPlay(BaseEnvForPlay):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
