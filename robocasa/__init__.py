@@ -320,6 +320,7 @@ PLAY_TASK_NAME_TO_CLASS = {
     "PnPSinkToCabinetL2": "PnPSinkToCabinetL2",
     "PnPLeftCounterPlateToSinkL2": "PnPLeftCounterPlateToSinkL2",
     "OpenRightCabinetDoorL2": "OpenRightCabinetDoorL2",
+    "CloseRightCabinetDoorL2": "CloseRightCabinetDoorL2",
 }
 
 try:

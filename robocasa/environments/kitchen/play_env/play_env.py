@@ -482,6 +482,16 @@ class OpenRightCabinetDoorL2(OpenRightCabinetDoor):
         return super().set_ep_meta(ep_meta)
 
 
+class CloseRightCabinetDoorL2(CloseRightCabinetDoor):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
+    def set_ep_meta(self, ep_meta):
+        if "style_id" in ep_meta:
+            ep_meta["style_id"] = "006_l2"
+        return super().set_ep_meta(ep_meta)
+
+
 class StoveEnvForPlay(BaseEnvForPlay):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
