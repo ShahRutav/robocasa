@@ -428,6 +428,37 @@ class PnPSinkToRightCounterPlateL2(PnPSinkToRightCounterPlate):
         return super().set_ep_meta(ep_meta)
 
 
+class L2Image(SinkEnvForPlay):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        # assert self.style_id == "004_l2"
+
+    def split_type(self):
+        return "test"
+
+    def set_ep_meta(self, ep_meta):
+        # if "style_id" in ep_meta:
+        #     ep_meta["style_id"] = "004_l2"
+        if "object_cfgs" in ep_meta:  ## overriting
+            for obj_cfg in ep_meta["object_cfgs"]:
+                if obj_cfg["name"] == "vegetable_container":
+                    import ipdb
+
+                    ipdb.set_trace()
+                    obj_cfg["obj_groups"] = "vegetable_set_test"
+                if obj_cfg["name"] == "bread":
+                    obj_cfg["obj_groups"] = "bread_set_test"
+                if obj_cfg["name"] == "fruit":
+                    obj_cfg["obj_groups"] = "fruit_set_test"
+                if obj_cfg["name"] == "vegetable_container":
+                    obj_cfg["obj_groups"] = "container_set_train"
+                if obj_cfg["name"] == "fruit_container":
+                    obj_cfg["obj_groups"] = "container_set_test"
+                if obj_cfg["name"] == "bread_container":
+                    obj_cfg["obj_groups"] = "container_set_test"
+        return super().set_ep_meta(ep_meta)
+
+
 class CloseLeftCabinetDoorL2(CloseLeftCabinetDoor):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
