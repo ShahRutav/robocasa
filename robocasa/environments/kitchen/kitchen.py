@@ -251,9 +251,11 @@ class Kitchen(ManipulationEnv, metaclass=KitchenEnvMeta):
         translucent_robot=False,
         randomize_cameras=False,
         camera_segmentations=None,
+        eval_mode=None,
         ep_meta={},
     ):
         self.init_robot_base_pos = init_robot_base_pos
+        self.eval_mode = eval_mode
 
         # object placement initializer
         self.placement_initializer = placement_initializer

@@ -324,17 +324,56 @@ class PnPSinkToRightCounterPlate(SinkEnvForPlay):
         super().set_ep_meta(ep_meta)
         return ep_meta
 
+    def _load_model(self, *args, **kwargs):
+        if hasattr(self, "eval_mode") and self.eval_mode == "diff_obj":
+            for cfg in self._ep_meta["object_cfgs"]:
+                if cfg["name"] == "vegetable":
+                    del cfg["info"]
+        return super()._load_model(*args, **kwargs)
+
 
 class CloseRightCabinetDoor(SinkEnvForPlay):
     def _check_success(self):
         cab_state = self.cab_sink.get_door_state(self)
         return cab_state["right_door"] < 0.1
 
+    def _load_model(self, *args, **kwargs):
+        if hasattr(self, "eval_mode") and self.eval_mode == "diff_obj":
+            self._ep_meta["style_ids"] = [
+                "001_l1",
+                "038_l1",
+                "014_l1",
+                "015_l1",
+                "019_l1",
+                "037_l1",
+            ]
+            self._ep_meta["style_id"] = np.random.choice(self._ep_meta["style_ids"])
+        return super()._load_model(*args, **kwargs)
+
 
 class CloseLeftCabinetDoor(SinkEnvForPlay):
     def _check_success(self):
         cab_state = self.cab_sink.get_door_state(self)
         return cab_state["left_door"] < 0.1
+
+    def _reset_internal(self):
+        """
+        Resets simulation internal configurations.
+        """
+        super()._reset_internal()
+
+    def _load_model(self, *args, **kwargs):
+        if hasattr(self, "eval_mode") and self.eval_mode == "diff_obj":
+            self._ep_meta["style_ids"] = [
+                "001_l1",
+                "038_l1",
+                "014_l1",
+                "015_l1",
+                "019_l1",
+                "037_l1",
+            ]
+            self._ep_meta["style_id"] = np.random.choice(self._ep_meta["style_ids"])
+        return super()._load_model(*args, **kwargs)
 
 
 class OpenRightCabinetDoor(SinkEnvForPlay):
@@ -359,6 +398,13 @@ class PnPSinkToCabinet(SinkEnvForPlay):
         obj_name = "vegetable"
         is_tar_contact = OU.check_obj_fixture_contact(self, obj_name, self.cab_sink)
         return is_tar_contact
+
+    def _load_model(self, *args, **kwargs):
+        if hasattr(self, "eval_mode") and self.eval_mode == "diff_obj":
+            for cfg in self._ep_meta["object_cfgs"]:
+                if cfg["name"] == "vegetable":
+                    del cfg["info"]
+        return super()._load_model(*args, **kwargs)
 
 
 class TurnOnFaucet(SinkEnvForPlay):
