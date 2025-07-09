@@ -62,7 +62,12 @@ def is_empty_input_spacemouse(action_dict):
     ):
         return True
 
-    return False
+    if "base_mode" in action_dict and action_dict["base_mode"] != -1:
+        return False
+    if "base" in action_dict and not np.all(action_dict["base"] == 0):
+        return False
+
+    return True
 
 
 def collect_human_trajectory(
