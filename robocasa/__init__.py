@@ -290,6 +290,8 @@ from robocasa.environments.kitchen.single_stage.kitchen_stove import (
     TurnOnStove,
 )
 
+from robocasa.environments.kitchen.memory import *
+
 PLAY_TASK_NAME_TO_CLASS = {
     "turn_on_faucet": "TurnOnFaucetDebug",
     "turn_off_faucet": "TurnOffFaucetDebug",

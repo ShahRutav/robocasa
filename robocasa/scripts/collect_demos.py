@@ -25,7 +25,10 @@ from termcolor import colored
 
 # from robosuite import load_controller_config
 import robosuite
-from robosuite.controllers import load_composite_controller_config
+from robosuite.controllers import (
+    load_composite_controller_config,
+    load_part_controller_config,
+)
 from robosuite.wrappers import DataCollectionWrapper, VisualizationWrapper
 from robosuite.utils.control_utils import convert_delta_to_abs_action
 
@@ -33,8 +36,15 @@ import robocasa
 import robocasa.macros as macros
 from robocasa.models.fixtures import FixtureType
 from robocasa.utils.robomimic.robomimic_dataset_utils import convert_to_robomimic_format
+from robocasa.models.exploration_policy import RotateExplorationPolicy
 
 from icrt.util.misc import confirm_user
+
+
+def explore_env_with_rotate(env):
+    # in this function, we will rotate the robot by 45 degrees to the left and then right and then back to the original position
+    obs = env._get_observation()
+    base_angle = env.robots[0].base.get_pose()[2]
 
 
 def control_seed(seed):
@@ -63,11 +73,39 @@ def is_empty_input_spacemouse(action_dict):
         return True
 
     if "base_mode" in action_dict and action_dict["base_mode"] != -1:
-        return False
-    if "base" in action_dict and not np.all(action_dict["base"] == 0):
-        return False
+        # if "base_mode" in action_dict and action_dict["base_mode"] != -1:
+        #     return False
+        if "base" in action_dict and np.all(action_dict["base"] == 0):
+            return True
+    return False
 
-    return True
+
+def explore_loop(env, explore_policy, render=True, max_fr=None, print_info=True):
+    env.set_policy_mode(1)  # 1: exploration policy
+    explore_policy.begin()
+    obs = env._get_observations()
+    step_count = 0
+    while True:
+        start = time.time()
+        action = explore_policy.get_action(obs)
+        if action is None:
+            print(
+                colored(
+                    "Exploration completed after {} steps".format(step_count), "green"
+                )
+            )
+            break
+        obs, _, _, _ = env.step(action)
+        # if render:
+        #     env.render()
+        if max_fr is not None:
+            elapsed = time.time() - start
+            diff = 1 / max_fr - elapsed
+            if diff > 0:
+                time.sleep(diff)
+        step_count += 1
+    env.set_policy_mode(0)  # 0: teleoperation
+    return step_count
 
 
 def collect_human_trajectory(
@@ -107,7 +145,6 @@ def collect_human_trajectory(
     #     env.set_ep_meta(ep_meta)
 
     env.reset()
-
     # if (not load_from_pickle) and (env_name != "Lift"):
     #     ep_meta = env.get_ep_meta()
     #     pickle.dump(ep_meta, open(ep_meta_file_name, "wb"))
@@ -151,7 +188,7 @@ def collect_human_trajectory(
     active_robot = env.robots[device[0].active_robot]
     zero_action = np.zeros(env.action_dim)
     zero_action_dict = {}
-    arms = ["left", "right"] if args.dual_arm else ["left"]
+    arms = ["left", "right"] if args.dual_arm else ["right"]
     for arm in arms:
         # controller has absolute actions, so we need to set the initial action to be the current position
         zero_action = np.zeros(7)
@@ -174,6 +211,15 @@ def collect_human_trajectory(
     discard_traj = False
 
     success = False
+    if args.explore_policy != "":
+        explore_policy = eval(args.explore_policy)(env)
+        step_count = explore_loop(
+            env, explore_policy, render=render, max_fr=max_fr, print_info=print_info
+        )
+        print(
+            colored("Exploration completed after {} steps".format(step_count), "green")
+        )
+
     # Loop until we get a reset from the input or the task completes
     while True:
         start = time.time()
@@ -217,14 +263,18 @@ def collect_human_trajectory(
 
         # print(is_empty_input_spacemouse(action_dict))
         if is_empty_input_spacemouse(action_dict):
-            if not nonzero_ac_seen:
+            if (not nonzero_ac_seen) and (not env.count_empty_actions):
+                # Print something that indicates that is is a zero action but not completely destroys my terminal output.
+                # print(".", end="", flush=True)
+                print("*" * 1, end=" ", flush=True)
+                # print("action_dict", action_dict)
                 if render:
                     env.render()
                 continue
-        else:
-            nonzero_ac_seen = True
+        # else:
+        #     nonzero_ac_seen = True
 
-        print("action_dict", action_dict)
+        # print("action_dict", action_dict)
         # Maintain gripper state for each robot but only update the active robot with action
         env_action = [
             robot.create_action_vector(all_prev_gripper_actions[i])
@@ -324,6 +374,7 @@ def gather_demonstrations_as_hdf5(directory, out_dir, env_info, excluded_episode
         initial_obj_qpos = {}
         initial_qpos = None
         non_robot_qpos_idx = []
+        policy_mode_list = []
         index = 0
         # success = False
 
@@ -333,6 +384,7 @@ def gather_demonstrations_as_hdf5(directory, out_dir, env_info, excluded_episode
 
             states.extend(dic["states"])
             obs.extend(dic["obs"])
+            policy_mode_list.extend(dic["policy_mode_list"])
             for ai in dic["action_infos"]:
                 actions.append(ai["actions"])
                 if "actions_abs" in ai:
@@ -355,8 +407,10 @@ def gather_demonstrations_as_hdf5(directory, out_dir, env_info, excluded_episode
         # so we end up with an extra state at the end.
         del states[-1]
         del obs[-1]
+        del policy_mode_list[-1]
         assert len(states) == len(actions)
         assert len(obs) == len(actions)
+        assert len(policy_mode_list) == len(actions)
 
         num_eps += 1
         ep_data_grp = grp.create_group("demo_{}".format(num_eps))
@@ -380,6 +434,7 @@ def gather_demonstrations_as_hdf5(directory, out_dir, env_info, excluded_episode
         # write datasets for states and actions
         ep_data_grp.create_dataset("states", data=np.array(states))
         ep_data_grp.create_dataset("actions", data=np.array(actions))
+        ep_data_grp.create_dataset("policy_mode", data=np.array(policy_mode_list))
         if len(actions_abs) > 0:
             print(np.array(actions_abs).shape)
             ep_data_grp.create_dataset("actions_abs", data=np.array(actions_abs))
@@ -424,12 +479,20 @@ if __name__ == "__main__":
     parser.add_argument(
         "--directory",
         type=str,
-        default=os.path.join(robocasa.models.assets_root, "demonstrations_private"),
+        # default=os.path.join(robocasa.models.assets_root, "demonstrations_private"),
+        default="datasets/memory",
     )
     parser.add_argument("--environment", type=str, default="Kitchen")
     parser.add_argument("--seed", "-s", type=int, default=0)
     parser.add_argument(
         "--n_demos", type=int, default=50, help="Number of demonstrations to collect"
+    )
+    parser.add_argument(
+        "--explore_policy",
+        type=str,
+        default="",
+        choices=["RotateExplorationPolicy"],
+        help="Exploration policy to append to the demonstrations",
     )
     parser.add_argument(
         "--robots",
@@ -510,24 +573,30 @@ if __name__ == "__main__":
     for robot in args.robots:
         if "GR1" in robot:
             args.controller = "WHOLE_BODY_MINK_IK"
+        if robot == "PandaOmron":
+            args.controller = "OSC_POSE"
     print("Controller:", args.controller)
     # Get controller config
     # controller_config = load_controller_config(default_controller=args.controller)
-    controller_config = load_composite_controller_config(
-        controller=args.controller,
-        robot=args.robots if isinstance(args.robots, str) else args.robots[0],
-    )
+    if args.controller == "OSC_POSE":
+        controller_config = load_part_controller_config(default_controller="OSC_POSE")
+    else:
+        controller_config = load_composite_controller_config(
+            controller=args.controller,
+            robot=args.robots if isinstance(args.robots, str) else args.robots[0],
+        )
 
     if controller_config["type"] == "WHOLE_BODY_MINK_IK":
         # mink-speicific import. requires installing mink
         from robosuite.examples.third_party_controller.mink_controller import (
             WholeBodyMinkIK,
         )
-    controller_config["body_parts"]["right"]["input_type"] = "absolute"
-    controller_config["body_parts"]["right"]["input_ref_frame"] = args.ref_frame
-    if "left" in controller_config["body_parts"]:
-        controller_config["body_parts"]["left"]["input_type"] = "absolute"
-        controller_config["body_parts"]["left"]["input_ref_frame"] = args.ref_frame
+    if "body_parts" in controller_config:
+        controller_config["body_parts"]["right"]["input_type"] = "delta"
+        controller_config["body_parts"]["right"]["input_ref_frame"] = args.ref_frame
+        if "left" in controller_config["body_parts"]:
+            controller_config["body_parts"]["left"]["input_type"] = "delta"
+            controller_config["body_parts"]["left"]["input_ref_frame"] = args.ref_frame
 
     env_name = args.environment
 
@@ -620,8 +689,8 @@ if __name__ == "__main__":
             env=env,
             pos_sensitivity=args.pos_sensitivity,
             rot_sensitivity=args.rot_sensitivity,
-            # vendor_id=macros.SPACEMOUSE_VENDOR_ID,
-            # product_id=macros.SPACEMOUSE_PRODUCT_ID,
+            vendor_id=macros.SPACEMOUSE_VENDOR_ID,
+            product_id=macros.SPACEMOUSE_PRODUCT_ID,
         )
     elif args.device == "oculus":
         assert args.pos_sensitivity == 3.0
@@ -651,7 +720,8 @@ if __name__ == "__main__":
     print(len(device), "devices")
 
     # make a new timestamped directory
-    new_dir = os.path.join(args.directory)
+    new_dir = os.path.join(args.directory, env_name, time_str)
+    print("new_dir", new_dir)
     assert not os.path.exists(
         os.path.join(new_dir, "demo.hdf5")
     ), "Directory already exists"

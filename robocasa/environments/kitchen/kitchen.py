@@ -302,6 +302,7 @@ class Kitchen(ManipulationEnv, metaclass=KitchenEnvMeta):
         self.use_object_obs = use_object_obs
         self.reward_scale = reward_scale
         self.reward_shaping = reward_shaping
+        self.count_empty_actions = False
 
         if controller_configs is not None:
             # detect if using stale controller configs (before robosuite v1.5.1) and update to new convention
@@ -1043,7 +1044,21 @@ class Kitchen(ManipulationEnv, metaclass=KitchenEnvMeta):
         for robot in self.robots:
             for arm in robot.arms:
                 print("arm", arm, robot.arms)
-                action = np.zeros(self.action_spec[0].shape[0] // len(robot.arms))
+                action_dim = self.action_spec[0].shape[0]
+                base_action_dim = None
+                if (action_dim == 7) or (action_dim == 14):
+                    action = np.zeros(self.action_spec[0].shape[0] // len(robot.arms))
+                    base_action_dim = 0
+                elif action_dim == 12:
+                    action = np.zeros(7)
+                    base_action_dim = (
+                        5  # Omron has 6 arm + 1 gripper + 4 base + 1 switch
+                    )
+                else:
+                    raise NotImplementedError(
+                        f"Not implemented for action dimension: {action_dim}"
+                    )
+                # base_action = action[-base_action_dim:]
                 if robot.part_controllers[arm].input_type == "absolute":
                     assert (
                         len(self.robots) == 1
@@ -1700,6 +1715,12 @@ class Kitchen(ManipulationEnv, metaclass=KitchenEnvMeta):
                         fxtr
                         for fxtr in cand_fixtures
                         if fxtr.pos[2] > ref_fixture.pos[2]
+                    ]
+                elif loc == "below":
+                    cand_fixtures = [
+                        fxtr
+                        for fxtr in cand_fixtures
+                        if fxtr.pos[2] < ref_fixture.pos[2]
                     ]
                 else:
                     raise ValueError(f"Invalid loc: {loc} for sampling a fixture")
