@@ -62,10 +62,7 @@ class ExplorationPolicy:
         """
         Check if the current quaternion is close to the target quaternion.
         """
-        print(f"target_quat: {target_quat}")
-        print(f"current_quat: {current_quat}")
         quat_diff = T.quat_multiply(T.quat_inverse(target_quat), current_quat)
         euler_diff = T.mat2euler(T.quat2mat(quat_diff))
-        print(f"{np.linalg.norm(euler_diff):.4f}")
         condition = np.linalg.norm(euler_diff) < threshold
         return condition

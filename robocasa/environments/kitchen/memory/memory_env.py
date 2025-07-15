@@ -133,6 +133,12 @@ class MemFruitInSink(MultiTaskBase):
         )
         return cfgs
 
+    def get_ep_meta(self):
+        ep_meta = super().get_ep_meta()
+        obj_lang = self.get_obj_lang(obj_name="fruit")
+        ep_meta["lang"] = f"Pick up the {obj_lang} and place it in the sink."
+        return ep_meta
+
     def _reset_internal(self):
         """
         Resets simulation internal configurations.

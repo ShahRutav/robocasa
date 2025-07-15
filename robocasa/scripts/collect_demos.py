@@ -41,12 +41,6 @@ from robocasa.models.exploration_policy import RotateExplorationPolicy
 from icrt.util.misc import confirm_user
 
 
-def explore_env_with_rotate(env):
-    # in this function, we will rotate the robot by 45 degrees to the left and then right and then back to the original position
-    obs = env._get_observation()
-    base_angle = env.robots[0].base.get_pose()[2]
-
-
 def control_seed(seed):
     random.seed(seed)
     np.random.seed(seed)
@@ -214,7 +208,11 @@ def collect_human_trajectory(
     if args.explore_policy != "":
         explore_policy = eval(args.explore_policy)(env)
         step_count = explore_loop(
-            env, explore_policy, render=render, max_fr=max_fr, print_info=print_info
+            env,
+            explore_policy,
+            render=args.render_exploration,
+            max_fr=max_fr,
+            print_info=print_info,
         )
         print(
             colored("Exploration completed after {} steps".format(step_count), "green")
@@ -556,6 +554,9 @@ if __name__ == "__main__":
     parser.add_argument("--dual_arm", action="store_true")
     parser.add_argument(
         "--renderer", type=str, default="mjviewer", choices=["mjviewer", "mujoco"]
+    )
+    parser.add_argument(
+        "--render_exploration", action="store_true", help="Render the exploration"
     )
     parser.add_argument(
         "--max_fr", default=30, type=int, help="If specified, limit the frame rate"
