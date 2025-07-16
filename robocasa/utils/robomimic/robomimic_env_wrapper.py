@@ -3,12 +3,46 @@ This file contains the robosuite environment wrapper that is used
 to provide a standardized environment API for training policies and interacting
 with metadata present in datasets.
 """
+import os
 import json
 import numpy as np
 from copy import deepcopy
+from pathlib import Path
+from lxml import etree
 
 import robosuite
+import robocasa
 import robocasa.utils.robomimic.robomimic_obs_utils as ObsUtils
+
+def fix_asset_paths_relative_to_robocasa(xml_string, robocasa_module, robocasa_marker="robocasa/models/assets"):
+    """
+    Replace all asset file paths in the xml string so that the prefix up to 'robocasa'
+    is replaced with the robocasa installation path.
+    
+    Args:
+        xml_string (str): Original MJCF XML as string
+        robocasa_module: The imported `robocasa` module (or any module within it)
+        robocasa_marker (str): Folder name to identify the point in path replacement
+    """
+    # Parse and fix XML
+    root = etree.fromstring(xml_string)
+    for tag in ["mesh", "texture", "heightfield"]:
+        for elem in root.findall(f".//{tag}"):
+            file_attr = elem.get("file")
+            if file_attr:
+                # Replace only if absolute and contains old robocasa path
+                if file_attr.startswith("/"):
+                    # parts = Path(file_attr).parts
+                    # find out what is the index of the robocasa marker
+                    idx = file_attr.find(robocasa_marker)
+                    if idx != -1:
+                        curr_home_path = '/'.join(robocasa.__file__.split('/')[:-2])
+                        rel_path = file_attr[idx:]
+                        new_path = os.path.join(curr_home_path, rel_path)
+                        new_path = Path(new_path).resolve()
+                        elem.set("file", str(new_path))
+    
+    return etree.tostring(root, pretty_print=True).decode("utf-8")
 
 
 class EnvRobocasa:
@@ -197,6 +231,7 @@ class EnvRobocasa:
                 # v1.4 and above use the class-based edit_model_xml function
                 xml = self.env.edit_model_xml(state["model"])
 
+            xml = fix_asset_paths_relative_to_robocasa(xml_string=xml, robocasa_module=robocasa)
             self.env.reset_from_xml_string(xml)
             self.env.sim.reset()
             if not self._is_v1:
