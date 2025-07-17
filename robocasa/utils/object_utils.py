@@ -9,6 +9,14 @@ from robosuite.utils.mjcf_utils import (
 from robocasa.models.objects.objects import MJCFObject
 
 
+def get_z_dist(env, obj_name="fruit", container_name="fruit_container"):
+    obj = env.objects[obj_name]
+    obj_pos = np.array(env.sim.data.body_xpos[env.obj_body_id[obj.name]])
+    container_pos = np.array(env.sim.data.body_xpos[env.obj_body_id[container_name]])
+    z_dist = obj_pos[2] - container_pos[2]
+    return z_dist
+
+
 def obj_inside_of(env, obj_name, fixture_id, partial_check=False):
     """
     whether an object (another mujoco object) is inside of fixture. applies for most fixtures

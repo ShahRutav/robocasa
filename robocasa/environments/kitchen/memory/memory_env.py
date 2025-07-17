@@ -185,6 +185,49 @@ class MemFruitInSinkRightFar(MemFruitInSink):
         return obj_cfgs
 
 
+class MemFruitPickLeftFar(MemFruitInSinkLeftFar):
+    def _reset_internal(self):
+        super()._reset_internal()
+        self.orig_z_dist = OU.get_z_dist(
+            self, obj_name="fruit", container_name="fruit_container"
+        )
+        return
+
+    def get_ep_meta(self):
+        ep_meta = super().get_ep_meta()
+        obj_lang = self.get_obj_lang(obj_name="fruit")
+        ep_meta["lang"] = f"Pick up the {obj_lang}."
+        return ep_meta
+
+    def _check_success(self):
+        # check if the fruit is away from the plate by 4 cm more than the original z distance
+        return (
+            OU.get_z_dist(self, obj_name="fruit", container_name="fruit_container")
+            > self.orig_z_dist + 0.08
+        )
+
+
+class MemFruitPickRightFar(MemFruitInSinkRightFar):
+    def _reset_internal(self):
+        super()._reset_internal()
+        self.orig_z_dist = OU.get_z_dist(
+            self, obj_name="fruit", container_name="fruit_container"
+        )
+        return
+
+    def get_ep_meta(self):
+        ep_meta = super().get_ep_meta()
+        obj_lang = self.get_obj_lang(obj_name="fruit")
+        ep_meta["lang"] = f"Pick up the {obj_lang}."
+        return ep_meta
+
+    def _check_success(self):
+        return (
+            OU.get_z_dist(self, obj_name="fruit", container_name="fruit_container")
+            > self.orig_z_dist + 0.08
+        )
+
+
 class MemHeatPot(MultiTaskBase):
     def _setup_kitchen_references(self):
         super()._setup_kitchen_references()
