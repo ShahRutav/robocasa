@@ -14,8 +14,8 @@ class RotateExplorationPolicy(ExplorationPolicy):
         super().__init__(env)
         self.action_scale = action_scale
 
-    def begin(self, velocity_mode="random"):
-        super().begin()
+    def begin(self, velocity_mode="random", init_obs=None):
+        super().begin(init_obs)
         # find the target first and second quat positions by rotating the robot init_quat by 45 degrees to the left and right
         self.target_quat_1 = T.quat_multiply(
             self.init_robot_base_quat,
@@ -64,5 +64,8 @@ class RotateExplorationPolicy(ExplorationPolicy):
         elif not self.stage_three_done:
             base_action = np.array([0.0, 0.0, self.velocity])
         base_dict = {"base": base_action, "base_mode": np.array([1.0])}
-        base_vector = self.env.robots[0].create_action_vector(base_dict)
+        if hasattr(self.env, "robots"):
+            base_vector = self.env.robots[0].create_action_vector(base_dict)
+        else:
+            base_vector = self.env.env.robots[0].create_action_vector(base_dict)
         return base_vector
