@@ -265,9 +265,9 @@ OBJ_CATEGORIES = dict(
         cookable=False,
         freezable=True,
         aigen=dict(
-            scale=[0.80, 0.80, 1.0],
+            scale=[0.80, 0.80, 1.5],
         ),
-        objaverse=dict(scale=[0.70, 0.70, 1.0], exclude=["bread_22"]),  # hole on bottom
+        objaverse=dict(scale=[0.70, 0.70, 1.5], exclude=["bread_22"]),  # hole on bottom
     ),
     broccoli=dict(
         types=("vegetable"),
@@ -2182,7 +2182,7 @@ OBJ_GROUPS["meat_set_train"] = [
     "scallops",
 ]
 OBJ_GROUPS["meat_set_test"] = ["chicken_breast", "dumpling", "bacon"]
-OBJ_GROUPS["bread_set_train"] = ["bread", "baguette"]
+OBJ_GROUPS["bread_set_train"] = ["bread", "baguette", "bagel", "scone"]
 OBJ_GROUPS["bread_set_test"] = ["bagel", "scone"]
 OBJ_GROUPS["packaged_food_train"] = [
     "canola_oil",
@@ -2197,3 +2197,30 @@ OBJ_GROUPS["packaged_food_train"] = [
     "bar",
 ]
 OBJ_GROUPS["packaged_food_test"] = ["cereal", "vinegar", "chips", "jello_cup"]
+
+COOK_FPS = 5
+OBJ_COOK_TIMINGS = {
+    "ham": 120 * COOK_FPS,  # 2 min per side bacon-like slice
+    "steak": 180 * COOK_FPS,  # 3 min per side for medium-rare
+    "sushi": 45
+    * COOK_FPS,  # flash-sear tuna, ~30–45 sec per side :contentReference[oaicite:1]{index=1}
+    "lamb_chop": 180
+    * COOK_FPS,  # ~3 min per side similar to steak :contentReference[oaicite:2]{index=2}
+    "fish": 120
+    * COOK_FPS,  # ~2 min per side, depends on thickness :contentReference[oaicite:3]{index=3}
+    "pork_chop": 240
+    * COOK_FPS,  # ~4 min per side; 3–5 min range :contentReference[oaicite:4]{index=4}
+    "sausage": 300
+    * COOK_FPS,  # ~4 min first side, then flip; link/patty browned :contentReference[oaicite:5]{index=5}
+    "pork_loin": 180
+    * COOK_FPS,  # ~3 min per side like tenderloin :contentReference[oaicite:6]{index=6}
+    "shrimp": 60
+    * COOK_FPS,  # 1 min per side for peeled shrimp :contentReference[oaicite:7]{index=7}
+    "scallops": 60
+    * COOK_FPS,  # 1 min per side for scallops :contentReference[oaicite:8]{index=8}
+    "chicken_breast": 240
+    * COOK_FPS,  # ~4 min per side to reach safe temp :contentReference[oaicite:9]{index=9}
+    "dumpling": 120
+    * COOK_FPS,  # pan-sear ~2 min, then steam :contentReference[oaicite:10]{index=10}
+    "bacon": 180 * COOK_FPS,  # ~3 min per side for crispy strip
+}

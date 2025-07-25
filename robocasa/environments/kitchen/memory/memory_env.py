@@ -7,6 +7,9 @@ import robocasa.macros as macros
 from robocasa.models.fixtures import *
 from termcolor import colored
 
+# from robocasa.models.objects.kitchen_objects import OBJ_COOK_TIMINGS
+import robocasa.models.objects.kitchen_objects as kobject
+
 macros.SHOW_SITES = True
 
 
@@ -33,7 +36,10 @@ class MultiTaskBase(Kitchen):
             "microwave",
             dict(id=FixtureType.MICROWAVE),
         )
-        print("layout_id: ", self.layout_id)
+        self.counter_microwave = self.register_fixture_ref(
+            "counter_microwave",
+            dict(id=FixtureType.COUNTER, ref=self.microwave),
+        )
         if self.layout_id not in [1, 3, 4, 5, 6]:
             self.cab_sink = self.register_fixture_ref(
                 "cab_sink", dict(id=FixtureType.CABINET, ref=self.sink, loc="above")
@@ -149,6 +155,7 @@ class MemFruitInSink(MultiTaskBase):
         self.sink.set_handle_state(mode="on", env=self, rng=self.rng)
         for drawer in self.all_drawers:
             drawer.set_door_state(min=0.0, max=0.001, env=self, rng=self.rng)
+        return
 
     def _check_success(self):
         obj_name = "fruit"
@@ -231,7 +238,16 @@ class MemFruitPickRightFar(MemFruitInSinkRightFar):
 class MemHeatPot(MultiTaskBase):
     def _setup_kitchen_references(self):
         super()._setup_kitchen_references()
+        self.init_robot_base_pos = self.stove
         return
+
+    def get_ep_meta(self):
+        ep_meta = super().get_ep_meta()
+        obj_lang = self.get_obj_lang(obj_name="meat")
+        ep_meta[
+            "lang"
+        ] = f"Turn on the stove, cook the {obj_lang}, and turn off the stove."
+        return ep_meta
 
     @property
     def pan_location_on_stove(self):
@@ -241,11 +257,20 @@ class MemHeatPot(MultiTaskBase):
         super()._reset_internal()
         self.turn_on_stove_success = False
         self.stove_wait_timer = 0
-        self.stove_wait_timer_threshold = 300
-        self.stove_wait_timer_max_threshold = self.stove_wait_timer_threshold + 200
+        # self.stove_wait_timer_threshold = 300
+        # self.stove_wait_timer_max_threshold = self.stove_wait_timer_threshold + 200
         self.turn_off_stove_success = False
         # self.knob = self._get_obj_location_on_stove("meat_container", threshold=0.08)
         self.knob = self.pan_location_on_stove
+
+        # get the object name from the sampled object
+        meat_cat = self.find_object_cfg_by_name("meat")["info"]["cat"]
+        cook_time = kobject.OBJ_COOK_TIMINGS[meat_cat]
+        self.stove_wait_timer_threshold = cook_time
+        # just one minute more than the cook time
+        self.stove_wait_timer_max_threshold = (
+            self.stove_wait_timer_threshold + 60 * kobject.COOK_FPS
+        )
         return
 
     def _get_obj_location_on_stove(self, obj_name, threshold=0.08):
@@ -302,11 +327,14 @@ class MemHeatPot(MultiTaskBase):
                     container_kwargs=dict(  # this will be overriding the placement fixture & rest will be copied
                         placement=dict(
                             loc=self.pan_location_on_stove,
-                            rotation=[(np.pi / 2 - np.pi / 8, np.pi / 2 + np.pi / 8)],
+                            rotation=[(-np.pi / 2 - np.pi / 8, -np.pi / 2 + np.pi / 8)],
                             sample_region_kwargs=dict(
                                 locs=[self.pan_location_on_stove],
                             ),
                         ),
+                        # rotation=[
+                        #     (np.pi / 2 - np.pi / 16, np.pi / 2 + np.pi / 16),
+                        # ],
                     ),
                 ),
             )
@@ -325,7 +353,9 @@ class MemHeatPot(MultiTaskBase):
         elif is_stove_on:  # we have turned on the stove and it is still on
             self.count_empty_actions = True
             self.stove_wait_timer += 1
-            print("stove wait timer: ", self.stove_wait_timer)
+            print(
+                f"stove wait timer: {self.stove_wait_timer}/{self.stove_wait_timer_threshold}"
+            )
 
         # we know that the stove is on, and we have waited for a while but not too much, so we can turn it off
         if (
@@ -346,3 +376,258 @@ class MemHeatPot(MultiTaskBase):
             and self.stove_wait_timer > self.stove_wait_timer_threshold
             and self.turn_off_stove_success
         )
+
+
+class MemWashAndReturn(MultiTaskBase):
+    def _reset_internal(self):
+        super()._reset_internal()
+        self.init_robot_base_pos = self.sink
+        self.place_success = False
+        self.final_success = False
+        joint_val = self.rng.uniform(0.45, 0.50)
+        # self.sink.set_handle_state(mode="on", env=self, rng=self.rng)
+        self.sim.data.set_joint_qpos(
+            "{}handle_joint".format(self.sink.naming_prefix), joint_val
+        )
+        return
+
+    @property
+    def fruit_container_counter_loc(self):
+        # to be implemented by the child class
+        raise NotImplementedError
+
+    def _get_obj_cfgs(self):
+        split_type = self.split_type()
+        cfgs = []
+        cfgs.append(
+            dict(
+                name="fruit",
+                obj_groups=f"fruit_set_{split_type}",
+                obj_registries=("objaverse", "aigen"),
+                obj_instance_split=None,
+                graspable=True,
+                placement=dict(
+                    fixture=self.counter_sink,
+                    size=(1.0, 1.0),
+                    pos=("ref", -1.0),
+                    try_to_place_in=f"container_set_{split_type}",
+                    container_kwargs=dict(
+                        placement=dict(
+                            fixture=self.counter_sink,
+                            sample_region_kwargs=dict(
+                                ref=self.sink,
+                                loc=self.fruit_container_counter_loc[0],
+                                top_size=(0.25, 0.25),
+                            ),
+                            size=(0.3, 0.3),
+                            pos=("ref", -1.0),
+                            offset=(
+                                self.fruit_container_counter_loc[1][0],
+                                self.fruit_container_counter_loc[1][1],
+                            ),  # 0.5 to the right of the counter sink and 0.1 to the top of the sink
+                        ),
+                    ),
+                ),
+            )
+        )
+        cfgs.append(
+            dict(
+                name="fruit_container2",
+                obj_groups=f"container_set_{split_type}",
+                obj_registries=("objaverse", "aigen"),
+                obj_instance_split=None,
+                placement=dict(
+                    fixture=self.counter_sink,
+                    size=(0.3, 0.3),
+                    pos=("ref", -1.0),
+                    sample_region_kwargs=dict(
+                        loc=self.fruit_container_counter_loc2[0],
+                        top_size=(0.25, 0.25),
+                        ref=self.sink,
+                    ),
+                    offset=(
+                        self.fruit_container_counter_loc2[1][0],
+                        self.fruit_container_counter_loc2[1][1],
+                    ),
+                ),
+            )
+        )
+        return cfgs
+
+    def step(self, action):
+        obs, reward, done, info = super().step(action)
+        # check if the fruit is in the sink
+        obj_name = "fruit"
+        if not self.place_success:
+            self.place_success = OU.check_obj_fixture_contact(self, obj_name, self.sink)
+        elif not self.final_success:
+            # check if the fruit is back in the container 'fruit_container'
+            tar_name = self.destination_container_name
+            is_in = OU.check_obj_in_receptacle(self, obj_name, tar_name)
+            is_gripper_far = OU.gripper_obj_far(self, obj_name=obj_name)
+            self.final_success = is_in and is_gripper_far
+
+        return obs, reward, done, info
+
+    def _check_success(self):
+        return self.place_success and self.final_success
+
+    def compute_robot_base_placement_pose(self, ref_fixture, offset=None):
+        additional_offset = (0.25, 0.00)
+        if offset is None:
+            offset = additional_offset
+        else:
+            offset = (
+                offset[0] + additional_offset[0],
+                offset[1] + additional_offset[1],
+            )
+        return super().compute_robot_base_placement_pose(ref_fixture, offset)
+
+
+class MemWashAndReturnLeft(MemWashAndReturn):
+    @property
+    def fruit_container_counter_loc(self):
+        return "left", (0.5, 0.05)
+
+    @property
+    def fruit_container_counter_loc2(self):
+        return "right", (0.0, 0.05)
+
+    @property
+    def destination_container_name(self):
+        return "fruit_container"
+
+    def get_ep_meta(self):
+        ep_meta = super().get_ep_meta()
+        ep_meta["lang"] = f"Wash the fruit and return it to the container."
+        return ep_meta
+
+
+class MemWashAndReturnRight(MemWashAndReturn):
+    @property
+    def fruit_container_counter_loc(self):
+        return "right", (0.0, 0.05)
+
+    @property
+    def fruit_container_counter_loc2(self):
+        return "left", (0.5, 0.05)
+
+    @property
+    def destination_container_name(self):
+        return "fruit_container"
+
+    def get_ep_meta(self):
+        ep_meta = super().get_ep_meta()
+        ep_meta["lang"] = f"Wash the fruit and return it to the container."
+        return ep_meta
+
+
+class MemPutKBreadInMicrowave(MultiTaskBase):
+    """
+    This task is to put the bread in the microwave and close the door.
+    """
+
+    fixed_n_bread_samples = None
+
+    def _setup_kitchen_references(self):
+        super()._setup_kitchen_references()
+        self.init_robot_base_pos = self.microwave
+        self.microwave._turned_on = False
+        self.n_objects_inside = 0
+        self.max_breads = 3
+        self.n_bread_samples = (
+            np.random.randint(1, self.max_breads + 1)
+            if self.fixed_n_bread_samples is None
+            else self.fixed_n_bread_samples
+        )
+        self.door_id = FixtureType.DOOR_TOP_HINGE_SINGLE
+        self.door_fxtr = self.register_fixture_ref("door_fxtr", dict(id=self.door_id))
+        self.init_robot_base_pos = self.door_fxtr
+        return
+
+    def set_ep_meta(self, ep_meta):
+        super().set_ep_meta(ep_meta)
+        if "n_bread_samples" in ep_meta:
+            self.fixed_n_bread_samples = ep_meta["n_bread_samples"]
+        else:
+            self.fixed_n_bread_samples = None
+        return
+
+    def get_ep_meta(self):
+        ep_meta = super().get_ep_meta()
+        ep_meta[
+            "lang"
+        ] = f"Put all the breads in the microwave and close the microwave door."
+        ep_meta["n_bread_samples"] = self.n_bread_samples
+        return ep_meta
+
+    def _reset_internal(self):
+        # open the door
+        self.door_fxtr.set_door_state(min=0.9, max=1.0, env=self, rng=self.rng)
+        return super()._reset_internal()
+
+    def _check_success(self):
+        # see how many breads are in the microwave
+        is_success = True
+        self.n_breads_in_microwave = 0
+        for obj_name in self.objects:
+            if obj_name.startswith("bread_"):
+                in_microwave = OU.check_obj_fixture_contact(
+                    self, obj_name, self.microwave
+                )
+                if in_microwave:
+                    self.n_breads_in_microwave += 1
+        is_success = self.n_breads_in_microwave == self.n_bread_samples
+
+        door_state = self.door_fxtr.get_door_state(env=self)
+        for joint_p in door_state.values():
+            if joint_p > 0.2:
+                is_success = False
+                break
+        return is_success
+
+    def _get_obj_cfgs(self):
+        split_type = self.split_type()
+        cfgs = []
+        for i in range(self.max_breads):
+            placement_reference = (
+                self.counter_microwave
+                if i < self.n_bread_samples
+                else self.counter_sink
+            )
+            sample_region_reference = (
+                self.microwave if i < self.n_bread_samples else self.sink
+            )
+            sample_size = (0.25, 0.25)
+            cfgs.append(
+                dict(
+                    name=f"bread_{i}",
+                    obj_groups=f"bread_set_{split_type}",
+                    obj_registries=("objaverse", "aigen"),
+                    obj_instance_split=None,
+                    graspable=True,
+                    placement=dict(
+                        fixture=placement_reference,
+                        size=sample_size,
+                        pos=("ref", -1.0),
+                        sample_region_kwargs=dict(
+                            loc="left_right",
+                            top_size=sample_size,
+                            ref=sample_region_reference,
+                        ),
+                        offset=(0.1, 0.0),
+                    ),
+                )
+            )
+        return cfgs
+
+    def compute_robot_base_placement_pose(self, ref_fixture, offset=None):
+        additional_offset = (0.65, 0.0)
+        if offset is None:
+            offset = additional_offset
+        else:
+            offset = (
+                offset[0] + additional_offset[0],
+                offset[1] + additional_offset[1],
+            )
+        return super().compute_robot_base_placement_pose(ref_fixture, offset)

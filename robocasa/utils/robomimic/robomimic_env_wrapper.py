@@ -14,11 +14,14 @@ import robosuite
 import robocasa
 import robocasa.utils.robomimic.robomimic_obs_utils as ObsUtils
 
-def fix_asset_paths_relative_to_robocasa(xml_string, robocasa_module, robocasa_marker="robocasa/models/assets"):
+
+def fix_asset_paths_relative_to_robocasa(
+    xml_string, robocasa_module, robocasa_marker="robocasa/models/assets"
+):
     """
     Replace all asset file paths in the xml string so that the prefix up to 'robocasa'
     is replaced with the robocasa installation path.
-    
+
     Args:
         xml_string (str): Original MJCF XML as string
         robocasa_module: The imported `robocasa` module (or any module within it)
@@ -36,12 +39,12 @@ def fix_asset_paths_relative_to_robocasa(xml_string, robocasa_module, robocasa_m
                     # find out what is the index of the robocasa marker
                     idx = file_attr.find(robocasa_marker)
                     if idx != -1:
-                        curr_home_path = '/'.join(robocasa.__file__.split('/')[:-2])
+                        curr_home_path = "/".join(robocasa.__file__.split("/")[:-2])
                         rel_path = file_attr[idx:]
                         new_path = os.path.join(curr_home_path, rel_path)
                         new_path = Path(new_path).resolve()
                         elem.set("file", str(new_path))
-    
+
     return etree.tostring(root, pretty_print=True).decode("utf-8")
 
 
@@ -231,7 +234,9 @@ class EnvRobocasa:
                 # v1.4 and above use the class-based edit_model_xml function
                 xml = self.env.edit_model_xml(state["model"])
 
-            xml = fix_asset_paths_relative_to_robocasa(xml_string=xml, robocasa_module=robocasa)
+            xml = fix_asset_paths_relative_to_robocasa(
+                xml_string=xml, robocasa_module=robocasa
+            )
             self.env.reset_from_xml_string(xml)
             self.env.sim.reset()
             if not self._is_v1:
@@ -324,10 +329,11 @@ class EnvRobocasa:
                     ret[k] = ObsUtils.process_obs(obs=ret[k], obs_key=k)
 
         # "object" key contains object information
-        ret["object-state"] = np.array(
-            di["object-state"]
-        )  # double copying for backward compatibility
-        ret["objects-joint-state"] = np.array(di["objects-joint-state"])
+        if "object-state" in di:
+            ret["object-state"] = np.array(
+                di["object-state"]
+            )  # double copying for backward compatibility
+            ret["objects-joint-state"] = np.array(di["objects-joint-state"])
         if "object-state" in di:
             ret["object"] = np.array(di["object-state"])
         if "obj_pos" in di:  # more privileged info

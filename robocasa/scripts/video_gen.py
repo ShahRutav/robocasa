@@ -3,7 +3,8 @@ import numpy as np
 import cv2
 
 # go through output hdft5 file and get the video list with camera anem
-output_hdf5_path = "/Users/rutavms/research/gaze/robocasa/robocasa/models/assets/demonstrations_private/temp.hdf5"
+# output_hdf5_path = "/Users/rutavms/research/gaze/icrt_private/test_putbreadmicrowave/2025-07-24-16-15-57/demo_im128_notp.hdf5"
+output_hdf5_path = "/Users/rutavms/research/gaze/icrt_private/test_washandreturn/2025-07-24-16-22-53/demo_im128_notp.hdf5"
 video_file = output_hdf5_path.replace(".hdf5", ".mp4")
 camera_names = ["robot0_agentview_center_image", "robot0_eye_in_hand_image"]
 output_hdf5 = h5py.File(output_hdf5_path, "r")
