@@ -244,9 +244,10 @@ class MemHeatPot(MultiTaskBase):
     def get_ep_meta(self):
         ep_meta = super().get_ep_meta()
         obj_lang = self.get_obj_lang(obj_name="meat")
+        wait_time_in_mins = self.stove_wait_timer_threshold / kobject.COOK_FPS / 60
         ep_meta[
             "lang"
-        ] = f"Turn on the stove, cook the {obj_lang}, and turn off the stove."
+        ] = f"Turn on the stove, cook the {obj_lang}, wait for {wait_time_in_mins:.1f} minutes, and turn off the stove."
         return ep_meta
 
     @property
@@ -257,10 +258,7 @@ class MemHeatPot(MultiTaskBase):
         super()._reset_internal()
         self.turn_on_stove_success = False
         self.stove_wait_timer = 0
-        # self.stove_wait_timer_threshold = 300
-        # self.stove_wait_timer_max_threshold = self.stove_wait_timer_threshold + 200
         self.turn_off_stove_success = False
-        # self.knob = self._get_obj_location_on_stove("meat_container", threshold=0.08)
         self.knob = self.pan_location_on_stove
 
         # get the object name from the sampled object
