@@ -452,8 +452,7 @@ class MemWashAndReturn(MultiTaskBase):
         )
         return cfgs
 
-    def step(self, action):
-        obs, reward, done, info = super().step(action)
+    def _update_success(self):
         # check if the fruit is in the sink
         obj_name = "fruit"
         if not self.place_success:
@@ -464,7 +463,16 @@ class MemWashAndReturn(MultiTaskBase):
             is_in = OU.check_obj_in_receptacle(self, obj_name, tar_name)
             is_gripper_far = OU.gripper_obj_far(self, obj_name=obj_name)
             self.final_success = is_in and is_gripper_far
+        return
 
+    def reset(self, *args, **kwargs):
+        obs = super().reset(*args, **kwargs)
+        self._update_success()
+        return obs
+
+    def step(self, action):
+        obs, reward, done, info = super().step(action)
+        self._update_success()
         return obs, reward, done, info
 
     def _check_success(self):
