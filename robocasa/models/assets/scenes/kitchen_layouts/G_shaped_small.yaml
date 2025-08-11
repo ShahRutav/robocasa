@@ -45,13 +45,13 @@ room:
       backing: true
       size: [2.5, 1.5, 0.1]
       pos: [4.4, -2.5, 1.5]
-  
+
   wall_accessories:
     - name: outlet
       type: wall_accessory
       attach_to: wall
       pos: [4, null, 1.2]
-    
+
     - name: outlet_2
       type: wall_accessory
       attach_to: wall_left
@@ -143,7 +143,7 @@ main_group:
 
     - name: window_group
       type: framed_window
-      
+
       size: [1.45, 0.05, 1.25]
       num_windows: 2
       ofs: [0.0, .20, -0.10]
@@ -202,24 +202,39 @@ main_group:
       size: [1, 0.6, 0.84]
       align_to: stack_2
       side: right
-  
+
+  # counter_accessories:
+  #   - name: toaster
+  #     type: toaster
+
+  #     placement:
+  #       fixture: counter_main_main_group
+  #       size: [1.0, 0.4]
+  #       pos: [1.0, 1.0]
+  #       rotation: [0, 0]
+
+  #   - name: knife_block
+  #     type: knife_block
+
+  #     placement:
+  #       fixture: counter_main_main_group
+  #       size: [1.0, obj]
+  #       pos: [-1.0, 1.0]
+  #       rotation: [0, 0]
   counter_accessories:
-    - name: toaster
-      type: toaster
+    - name: microwave_1
+      type: microwave
+
+      # size: [0.5, 0.4, 0.4]
+      size: [0.3, 0.25, 0.25]
 
       placement:
-        fixture: counter_main_main_group
-        size: [1.0, 0.4]
-        pos: [1.0, 1.0]
-        rotation: [0, 0]
-
-    - name: knife_block
-      type: knife_block
-
-      placement:
-        fixture: counter_main_main_group
-        size: [1.0, obj]
-        pos: [-1.0, 1.0]
+        fixture: counter_1_right_group
+        sample_region_kwargs:
+          ref: sink
+          loc: "right"
+        size: [0.4, 1.0]
+        pos: ["ref", 1.0]
         rotation: [0, 0]
 
 # Group for island
@@ -253,7 +268,7 @@ front_group:
         fixture: counter_1_front_group
         size: [1.0, 0.40]
         pos: [0.0, 0.0]
-  
+
   stools:
     - name: stool_1
       type: stool
@@ -284,7 +299,7 @@ left_group:
 
     - name: stove
       type: stove
-    
+
       size: [null, 0.66, null]
       align_to: counter_1
       side: left
@@ -319,7 +334,7 @@ left_group:
       side: left
       alignment: bottom_back
       interior_obj: fridge
- 
+
   # Cabinets built into counters
   bottom_row_cabinets:
     - name: stack_1
@@ -423,7 +438,7 @@ left_group:
 
 
 # fixtures on the right wall
-right_group: 
+right_group:
   # rotation and displacement of the group
   group_origin: [0, 0]
   group_pos: [4.4, -0.7]
