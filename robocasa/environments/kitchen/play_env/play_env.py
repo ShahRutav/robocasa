@@ -414,10 +414,21 @@ class TurnOnFaucet(SinkEnvForPlay):
 
     def _check_success(self):
         handle_state = self.sink.get_handle_state(self)
-        if handle_state["handle_joint"] - self.init_handle_state["handle_joint"] > 0.05:
-            return True
         water_on = handle_state["water_on"]
         return water_on
+
+    def _load_model(self, *args, **kwargs):
+        if hasattr(self, "eval_mode") and self.eval_mode == "diff_obj":
+            self._ep_meta["style_ids"] = [
+                "001_l1",
+                "038_l1",
+                "014_l1",
+                "015_l1",
+                "019_l1",
+                "037_l1",
+            ]
+            self._ep_meta["style_id"] = np.random.choice(self._ep_meta["style_ids"])
+        return super()._load_model(*args, **kwargs)
 
 
 class PnPLeftCounterPlateToSink(SinkEnvForPlay):

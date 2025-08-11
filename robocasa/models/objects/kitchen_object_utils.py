@@ -323,6 +323,7 @@ def sample_kitchen_object_helper(
             if obj_found:
                 break
         if obj_found is False:
+            print(f"Object not found: {mjcf_path}")
             raise ValueError
         mjcf_kwargs["mjcf_path"] = mjcf_path
     else:
