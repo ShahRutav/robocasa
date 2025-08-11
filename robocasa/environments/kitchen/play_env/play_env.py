@@ -608,9 +608,48 @@ class PnPSinkToRightCounterPlateL3(PnPSinkToRightCounterPlate):
         return super().set_ep_meta(ep_meta)
 
 
+class PnPSinkToMicrowaveTopL3(SinkEnvForPlay):
+    def split_type(self):
+        return "test"
+
+    def _remove_specific_fixtures(self):
+        # does not remove any fixtures
+        return
+
+    def _get_obj_cfgs(self):
+        cfgs = super()._get_obj_cfgs()
+        remove_keys = ["fruit", "fruit_container"]
+        cfgs = [cfg for cfg in cfgs if cfg["name"] not in remove_keys]
+        return cfgs
+
+    def _reset_internal(self):
+        """
+        Resets simulation internal configurations.
+        """
+        super()._reset_internal()
+        if self.cab_sink is not None:
+            self.cab_sink.set_door_state(min=0.0, max=0.1, env=self, rng=self.rng)
+
+    def _check_success(self):
+        obj_name = "vegetable"
+        is_tar_contact = OU.is_on_top_of(self, obj_name, self.microwave)
+        return is_tar_contact and OU.gripper_obj_far(self, obj_name=obj_name)
+
+
 class CloseLeftCabinetDoorL3(CloseLeftCabinetDoor):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
+
+    def set_ep_meta(self, ep_meta):
+        return super().set_ep_meta(ep_meta)
+
+
+class TurnOnFaucetL3(TurnOnFaucet):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
+    def split_type(self):
+        return "test"
 
     def set_ep_meta(self, ep_meta):
         return super().set_ep_meta(ep_meta)
