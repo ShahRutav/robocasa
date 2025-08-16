@@ -19,6 +19,7 @@ class LayoutType(IntEnum):
     G_SHAPED_SMALL = 7
     G_SHAPED_LARGE = 8
     WRAPAROUND = 9
+    G_SHAPED_SMALL_COUNTERMW = 10  # microwave is on the countertop
 
     # negative values correspond to groups (see LAYOUT_GROUPS_TO_IDS)
     ALL = -1
@@ -29,7 +30,7 @@ class LayoutType(IntEnum):
 
 PLAY_TRAIN_LAYOUTS = [0, 1, 2, 3, 4, 5, 7, 8]
 
-PLAY_TEST_LAYOUTS = [6, 9]
+PLAY_TEST_LAYOUTS = [6, 9, 10]
 
 LAYOUT_GROUPS_TO_IDS = {
     -1: list(range(10)),  # all

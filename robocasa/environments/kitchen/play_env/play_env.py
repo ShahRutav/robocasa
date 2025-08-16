@@ -587,8 +587,6 @@ class PnPSinkToRightCounterPlateL3(PnPSinkToRightCounterPlate):
     def split_type(self):
         return "test"
 
-    # def _reset_internal(self):
-
     def set_ep_meta(
         self, ep_meta
     ):  # taken cared by the @split_type in the meta file generation
@@ -616,6 +614,10 @@ class PnPSinkToMicrowaveTopL3(SinkEnvForPlay):
         # does not remove any fixtures
         return
 
+    def set_ep_meta(self, ep_meta):
+        ep_meta["layout_id"] = 10
+        return super().set_ep_meta(ep_meta)
+
     def _get_obj_cfgs(self):
         cfgs = super()._get_obj_cfgs()
         remove_keys = ["fruit", "fruit_container"]
@@ -633,6 +635,9 @@ class PnPSinkToMicrowaveTopL3(SinkEnvForPlay):
     def _check_success(self):
         obj_name = "vegetable"
         is_tar_contact = OU.is_on_top_of(self, obj_name, self.microwave)
+        print(
+            f"is_tar_contact: {is_tar_contact}, OU.gripper_obj_far(self, obj_name=obj_name): {OU.gripper_obj_far(self, obj_name=obj_name)}"
+        )
         return is_tar_contact and OU.gripper_obj_far(self, obj_name=obj_name)
 
 
