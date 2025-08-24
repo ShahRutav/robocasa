@@ -15,14 +15,14 @@ def is_on_top_of(
     """
     Returns True if `obj_name` is resting on top of `fixture_id`.
 
-    This works in the fixture's local frame (u, v, w from get_int_sites):
-      - Horizontal check: bottom points must lie within [0 - tol_xy, size + tol_xy]
-        along both u and v axes.
-      - Vertical check: bottom points must lie within tol_z of the top plane (w = size).
-
-    If partial_check is True, only the object's center is tested (no bbox).
+    Args:
+        env: Environment containing objects and fixtures
+        obj_name: Name of the object to check
+        fixture_id: ID of the fixture to check against
+        partial_check: If True, only check object center (not bbox)
+        tol_xy: Horizontal tolerance for positioning
+        tol_z: Vertical tolerance for height
     """
-
     from robocasa.models.fixtures import Fixture
 
     obj = env.objects[obj_name]
@@ -30,50 +30,46 @@ def is_on_top_of(
     assert isinstance(obj, MJCFObject)
     assert isinstance(fixture, Fixture)
 
-    # fixture interior corner sites in world coords
+    # Get fixture's top surface bounds (interior sites)
     p0, px, py, pz = fixture.get_int_sites(relative=False)
-    u = px - p0  # interior x-axis vector
-    v = py - p0  # interior y-axis vector
-    w = pz - p0  # interior z-axis vector (up)
 
-    # normalize axes
-    nu = np.linalg.norm(u)
-    nv = np.linalg.norm(v)
-    nw = np.linalg.norm(w)
-    û = u / nu if nu > 0 else u
-    v̂ = v / nv if nv > 0 else v
-    ŵ = w / nw if nw > 0 else w
-
-    # get object pose
+    # Get object position
     body_id = env.obj_body_id[obj.name]
     obj_pos = np.array(env.sim.data.body_xpos[body_id])
-    obj_quat = T.convert_quat(env.sim.data.body_xquat[body_id], to="xyzw")
 
-    # pick which points to test
     if partial_check:
-        points_to_test = [obj_pos]
-    else:
-        # all 8 bbox corners in world coords
-        bbox = obj.get_bbox_points(trans=obj_pos, rot=obj_quat)
-        # pick those with minimal z → the bottom face
-        zmin = min(p[2] for p in bbox)
-        points_to_test = [p for p in bbox if abs(p[2] - zmin) < 1e-6]
+        # Just check if object center is on top
+        return _point_on_fixture_top(obj_pos, p0, px, py, pz, tol_xy, tol_z)
 
-    # run the checks
-    for p in points_to_test:
-        rel = p - p0
-        x_loc = np.dot(û, rel)
-        y_loc = np.dot(v̂, rel)
-        z_loc = np.dot(ŵ, rel)
+    # Get object's bottom face points
+    obj_quat = T.convert_quat(env.sim.data.body_xquat[body_id], to="xyzw")
+    bbox = obj.get_bbox_points(trans=obj_pos, rot=obj_quat)
 
-        inside_x = -tol_xy <= x_loc <= nu + tol_xy
-        inside_y = -tol_xy <= y_loc <= nv + tol_xy
-        on_top = abs(z_loc - nw) <= tol_z
+    # Find bottom face (points with minimum z)
+    zmin = min(p[2] for p in bbox)
+    bottom_points = [p for p in bbox if abs(p[2] - zmin) < 1e-6]
 
-        if not (inside_x and inside_y and on_top):
-            return False
+    # Check if all bottom points are on the fixture top
+    return all(
+        _point_on_fixture_top(p, p0, px, py, pz, tol_xy, tol_z) for p in bottom_points
+    )
 
-    return True
+
+def _point_on_fixture_top(point, p0, px, py, pz, tol_xy, tol_z):
+    """Helper: check if a single point is on the fixture's top surface"""
+    # Get fixture bounds
+    x_min = min(p0[0], px[0], py[0], pz[0]) - tol_xy
+    x_max = max(p0[0], px[0], py[0], pz[0]) + tol_xy
+    y_min = min(p0[1], px[1], py[1], pz[1]) - tol_xy
+    y_max = max(p0[1], px[1], py[1], pz[1]) + tol_xy
+    z_top = max(p0[2], px[2], py[2], pz[2])  # top surface height
+
+    # Check if point is within bounds and on top
+    x_inside = x_min <= point[0] <= x_max
+    y_inside = y_min <= point[1] <= y_max
+    z_on_top = abs(point[2] - z_top) <= tol_z
+
+    return x_inside and y_inside and z_on_top
 
 
 def obj_inside_of(env, obj_name, fixture_id, partial_check=False):
