@@ -13,8 +13,13 @@ SHOW_SITES = False
 VERBOSE = False
 
 # Spacemouse settings. Used by SpaceMouse class in robosuite/devices/spacemouse.py
-SPACEMOUSE_VENDOR_ID = 9583
-SPACEMOUSE_PRODUCT_ID = 50741
+# SPACEMOUSE_VENDOR_ID = 9583
+# SPACEMOUSE_PRODUCT_ID = 50741
+vendor_id = 0x256F
+product_id = 0xC635
+SPACEMOUSE_VENDOR_ID = vendor_id
+SPACEMOUSE_PRODUCT_ID = product_id
+
 
 DATASET_BASE_PATH = None
 

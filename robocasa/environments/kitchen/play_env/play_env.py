@@ -22,6 +22,19 @@ class StyleMixin:
         return super().set_ep_meta(ep_meta)
 
 
+class LayoutMixin:
+    REQUIRED_LAYOUT_ID = None
+    """Mixin for layout environments"""
+
+    def set_ep_meta(self, ep_meta):
+        assert (
+            self.REQUIRED_LAYOUT_ID is not None
+        ), "REQUIRED_LAYOUT_ID must be set for layout environments"
+        if "layout_id" in ep_meta:
+            ep_meta["layout_id"] = self.REQUIRED_LAYOUT_ID
+        return super().set_ep_meta(ep_meta)
+
+
 class BaseEnvForPlay(Kitchen):
     EXCLUDE_LAYOUTS = []
 
@@ -455,7 +468,10 @@ class CloseRightCabinetDoorL2(StyleMixin, CloseRightCabinetDoor):
     REQUIRED_STYLE_ID = "006_l2"
 
 
-class PnPSinkToRightCounterPlateL3(PnPSinkToRightCounterPlate):
+class PnPSinkToRightCounterPlateL3(StyleMixin, LayoutMixin, PnPSinkToRightCounterPlate):
+    REQUIRED_STYLE_ID = "014_l3"
+    REQUIRED_LAYOUT_ID = 7
+
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
@@ -481,7 +497,10 @@ class PnPSinkToRightCounterPlateL3(PnPSinkToRightCounterPlate):
         return super().set_ep_meta(ep_meta)
 
 
-class PnPSinkToMicrowaveTopL3(SinkEnvForPlay):
+class PnPSinkToMicrowaveTopL3(StyleMixin, LayoutMixin, SinkEnvForPlay):
+    REQUIRED_STYLE_ID = "014_l3"
+    REQUIRED_LAYOUT_ID = 10
+
     def _setup_kitchen_references(self) -> None:
         """Setup kitchen fixture references"""
         super()._setup_kitchen_references()
@@ -519,7 +538,10 @@ class PnPSinkToMicrowaveTopL3(SinkEnvForPlay):
         return is_tar_contact and OU.gripper_obj_far(self, obj_name=obj_name)
 
 
-class CloseLeftCabinetDoorL3(CloseLeftCabinetDoor):
+class CloseLeftCabinetDoorL3(StyleMixin, LayoutMixin, CloseLeftCabinetDoor):
+    REQUIRED_STYLE_ID = "014_l3"
+    REQUIRED_LAYOUT_ID = 7
+
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
@@ -527,7 +549,10 @@ class CloseLeftCabinetDoorL3(CloseLeftCabinetDoor):
         return super().set_ep_meta(ep_meta)
 
 
-class TurnOnFaucetL3(TurnOnFaucet):
+class TurnOnFaucetL3(StyleMixin, LayoutMixin, TurnOnFaucet):
+    REQUIRED_STYLE_ID = "014_l3"
+    REQUIRED_LAYOUT_ID = 10
+
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 

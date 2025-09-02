@@ -1,4 +1,5 @@
 import h5py
+import argparse
 import numpy as np
 import cv2
 import os
@@ -17,7 +18,14 @@ class HDF5VideoDataset(Dataset):
     PyTorch Dataset for loading video frames from HDF5 files with efficient preloading.
     """
 
-    def __init__(self, hdf5_path: str, camera_names: List[str], chunk_size: int = 100):
+    def __init__(
+        self,
+        hdf5_path: str,
+        camera_names: List[str],
+        chunk_size: int = 100,
+        img_width: int = -1,
+        img_height: int = -1,
+    ):
         """
         Args:
             hdf5_path: Path to the HDF5 file
@@ -27,6 +35,8 @@ class HDF5VideoDataset(Dataset):
         self.hdf5_path = hdf5_path
         self.camera_names = camera_names
         self.chunk_size = chunk_size
+        self.img_width = img_width
+        self.img_height = img_height
 
         # Get dataset info
         with h5py.File(hdf5_path, "r") as f:
@@ -61,6 +71,12 @@ class HDF5VideoDataset(Dataset):
             chunk_data = {}
             for camera_name in self.camera_names:
                 chunk_data[camera_name] = data[f"obs/{camera_name}"][start_idx:end_idx]
+                if self.img_width != -1:
+                    # resize the frame
+                    chunk_data[camera_name] = [
+                        cv2.resize(frame, (self.img_width, self.img_height))
+                        for frame in chunk_data[camera_name]
+                    ]
 
             # Store in thread-local storage
             if not hasattr(self, "_thread_local"):
@@ -104,6 +120,8 @@ def generate_video_from_hdf5_with_dataloader(
     batch_size: int = 32,
     num_workers: int = 4,
     chunk_size: int = 100,
+    img_width: int = -1,
+    img_height: int = -1,
 ) -> str:
     """
     Generate MP4 video from HDF5 file using PyTorch DataLoader for efficient loading.
@@ -137,7 +155,9 @@ def generate_video_from_hdf5_with_dataloader(
     print(f"Processing {hdf5_path} -> {output_file}")
 
     # Create dataset and dataloader
-    dataset = HDF5VideoDataset(hdf5_path, camera_names, chunk_size)
+    dataset = HDF5VideoDataset(
+        hdf5_path, camera_names, chunk_size, img_width, img_height
+    )
     dataloader = DataLoader(
         dataset,
         batch_size=batch_size,
@@ -193,6 +213,8 @@ def generate_video_from_hdf5(
     output_dir: Optional[str] = None,
     camera_names: List[str] = None,
     use_dataloader: bool = True,
+    img_width: int = -1,
+    img_height: int = -1,
     **dataloader_kwargs,
 ) -> str:
     """
@@ -210,7 +232,12 @@ def generate_video_from_hdf5(
     """
     if use_dataloader:
         return generate_video_from_hdf5_with_dataloader(
-            hdf5_path, output_dir, camera_names, **dataloader_kwargs
+            hdf5_path,
+            output_dir,
+            camera_names,
+            img_width=img_width,
+            img_height=img_height,
+            **dataloader_kwargs,
         )
     else:
         # Original implementation (keeping for backward compatibility)
@@ -255,7 +282,11 @@ def generate_video_from_hdf5(
                 ],
                 axis=1,
             )
-            height, width = first_frame.shape[:2]
+            height, width = (
+                first_frame.shape[:2]
+                if img_width == -1
+                else (img_height, img_width * len(camera_names))
+            )
             print(f"Dimensions: {height}x{width}")
 
             video_writer = cv2.VideoWriter(
@@ -279,8 +310,17 @@ def generate_video_from_hdf5(
 
                 for i in trange(n_frames):
                     # Concatenate camera images along width (axis=1)
+                    reisze_func = (
+                        lambda x: cv2.resize(x, (img_width, img_height))
+                        if img_width != -1
+                        else x
+                    )
+                    print(f"Resizing frame {i} to {img_width}x{img_height}")
                     frame = np.concatenate(
-                        [camera_data[camera_name][i] for camera_name in camera_names],
+                        [
+                            reisze_func(camera_data[camera_name][i])
+                            for camera_name in camera_names
+                        ],
                         axis=1,
                     )
                     video_writer.write(frame)
@@ -320,18 +360,43 @@ def process_multiple_hdf5_files(
     return generated_videos
 
 
+def parse_args():
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--img_width", type=int, required=False, default=256)
+    parser.add_argument("--img_height", type=int, required=False, default=256)
+    parser.add_argument("--output_dir", type=str, required=False, default=None)
+    return parser.parse_args()
+
+
 if __name__ == "__main__":
+    args = parse_args()
     base_dir = os.environ.get("CASAPLAY_DATAROOT", None)
     assert (
         base_dir is not None
     ), "CASAPLAY_DATAROOT environment variable must be set to the base directory of the dataset."
     # Example usage with DataLoader
     hdf5_paths = [
-        f"{base_dir}/PlayEnvFinal/final_prompts/PnPSinkToMicrowaveTopL3/003/demo_im1024_notp_highres.hdf5",
+        # f"{base_dir}/PlayEnvFinal/final_prompts/PnPSinkToMicrowaveTopL3/003/demo_im1024_notp_highres.hdf5",
+        # f"{base_dir}/PlayEnvFinal/final_prompts/CloseLeftCabinetDoor/003/demo_im1024_notp_highres.hdf5",
+        # f"{base_dir}/PlayEnvFinal/final_prompts/CloseLeftCabinetDoorL2/003/demo_im1024_notp_highres.hdf5",
+        # f"{base_dir}/PlayEnvFinal/final_prompts/CloseLeftCabinetDoorL3/003/demo_im1024_notp_highres.hdf5",
+        f"{base_dir}/PlayEnvFinal/final_high_res_prompts/CloseRightCabinetDoorL2/003/demo_im1024_notp_highres.hdf5",
+        # f"{base_dir}/PlayEnvFinal/final_prompts/PnPSinkToCabinet/003/demo_im1024_notp_highres.hdf5",
+        # f"{base_dir}/PlayEnvFinal/final_prompts/PnPSinkToCabinetL2/003/demo_im1024_notp_highres.hdf5",
+        # f"{base_dir}/PlayEnvFinal/final_prompts/PnPSinkToMicrowaveTopL3/003/demo_im1024_notp_highres.hdf5",
+        # f"{base_dir}/PlayEnvFinal/final_prompts/PnPSinkToRightCounterPlate/003/demo_im1024_notp_highres.hdf5",
+        # f"{base_dir}/PlayEnvFinal/final_prompts/PnPSinkToRightCounterPlateL2/003/demo_im1024_notp_highres.hdf5",
+        # f"{base_dir}/PlayEnvFinal/final_prompts/PnPSinkToRightCounterPlateL3/003/demo_im1024_notp_highres.hdf5",
+        # f"{base_dir}/PlayEnvFinal/final_prompts/TurnOnFaucet/003/demo_im1024_notp_highres.hdf5",
+        # f"{base_dir}/PlayEnvFinal/final_prompts/TurnOnFaucetL3/003/demo_im1024_notp_highres.hdf5",
     ]
-
+    # output_directory = (
+    #     f"{base_dir}/PlayEnvFinal/final_prompts/PnPSinkToMicrowaveTopL3/003/"
+    # )
     output_directory = (
-        f"{base_dir}/PlayEnvFinal/final_prompts/PnPSinkToMicrowaveTopL3/003/"
+        args.output_dir
+        if args.output_dir is not None
+        else "/home/rutavms/research/gaze/final_prompt_videos/"
     )
     os.makedirs(output_directory, exist_ok=True)
 
@@ -346,6 +411,8 @@ if __name__ == "__main__":
                 batch_size=16,  # Adjust based on your GPU/memory
                 num_workers=16,  # Adjust based on your CPU cores
                 chunk_size=50,  # Adjust based on your memory
+                img_width=args.img_width,
+                img_height=args.img_height,
             )
             if output_file:
                 generated_videos.append(output_file)

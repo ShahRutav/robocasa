@@ -6,17 +6,17 @@ The demonstrations can be played back using the `playback_demonstrations_from_pk
 script.
 """
 
+import select
+import sys
 import argparse
 from copy import deepcopy
 import datetime
 import json
 import os
 import time
-import pickle
 from glob import glob
 
 import h5py
-import imageio
 import mujoco
 import torch
 import random
@@ -34,7 +34,25 @@ import robocasa.macros as macros
 from robocasa.models.fixtures import FixtureType
 from robocasa.utils.robomimic.robomimic_dataset_utils import convert_to_robomimic_format
 
-from icrt.util.misc import confirm_user
+
+def confirm_user(question, info_string=None):
+    def _user_input(text, valid_inputs):
+        _input = input(text)
+        while _input not in valid_inputs:
+            _input = input(text)
+        return _input
+
+    # Function to clear input buffer
+    def clear_input_buffer():
+        while select.select([sys.stdin], [], [], 0)[0]:
+            sys.stdin.read(1)
+
+    clear_input_buffer()
+    if info_string is not None:
+        print(colored(info_string, "magenta"))
+
+    _input = _user_input(question, valid_inputs=["y", "n"])
+    return _input == "y"
 
 
 def control_seed(seed):
