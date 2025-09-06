@@ -26,8 +26,6 @@ from robocasa.environments.kitchen.multi_stage.brewing.prepare_coffee import (
 from robocasa.environments.kitchen.multi_stage.chopping_food.arrange_vegetables import (
     ArrangeVegetables,
 )
-from robocasa.environments.kitchen.play_env.sink_play import *
-from robocasa.environments.kitchen.play_env.play_env import *
 from robocasa.environments.kitchen.multi_stage.chopping_food.bread_setup_slicing import (
     BreadSetupSlicing,
 )
