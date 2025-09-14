@@ -488,9 +488,6 @@ class L2Image(SinkEnvForPlay):
         if "object_cfgs" in ep_meta:  ## overriting
             for obj_cfg in ep_meta["object_cfgs"]:
                 if obj_cfg["name"] == "vegetable_container":
-                    import ipdb
-
-                    ipdb.set_trace()
                     obj_cfg["obj_groups"] = "vegetable_set_test"
                 if obj_cfg["name"] == "bread":
                     obj_cfg["obj_groups"] = "bread_set_test"

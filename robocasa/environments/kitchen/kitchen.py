@@ -1722,6 +1722,18 @@ class Kitchen(ManipulationEnv, metaclass=KitchenEnvMeta):
                         for fxtr in cand_fixtures
                         if fxtr.pos[2] < ref_fixture.pos[2]
                     ]
+                elif loc == "right":
+                    cand_fixtures = [
+                        fxtr
+                        for fxtr in cand_fixtures
+                        if fxtr.pos[0] > ref_fixture.pos[0]
+                    ]
+                elif loc == "left":
+                    cand_fixtures = [
+                        fxtr
+                        for fxtr in cand_fixtures
+                        if fxtr.pos[0] < ref_fixture.pos[0]
+                    ]
                 else:
                     raise ValueError(f"Invalid loc: {loc} for sampling a fixture")
             # first, try to find fixture "containing" the reference fixture

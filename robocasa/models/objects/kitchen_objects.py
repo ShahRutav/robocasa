@@ -2184,6 +2184,9 @@ OBJ_GROUPS["meat_set_train"] = [
 OBJ_GROUPS["meat_set_test"] = ["chicken_breast", "dumpling", "bacon"]
 OBJ_GROUPS["bread_set_train"] = ["bread", "baguette", "bagel", "scone"]
 OBJ_GROUPS["bread_set_test"] = ["bagel", "scone"]
+OBJ_GROUPS["oil_set"] = ["canola_oil", "olive_oil_bottle"]
+OBJ_GROUPS["canola_oil"] = ["canola_oil"]
+OBJ_GROUPS["olive_oil"] = ["olive_oil_bottle"]
 OBJ_GROUPS["packaged_food_train"] = [
     "canola_oil",
     "canned_food",
@@ -2223,4 +2226,36 @@ OBJ_COOK_TIMINGS = {
     "dumpling": 120
     * COOK_FPS,  # pan-sear ~2 min, then steam :contentReference[oaicite:10]{index=10}
     "bacon": 180 * COOK_FPS,  # ~3 min per side for crispy strip
+    "tomato": 60 * COOK_FPS,  # add after 1 min
+    "bell_pepper": 60 * COOK_FPS,  # add after 1 min
+    "onion": 120 * COOK_FPS,  # add after 2 min
+    "garlic": 120 * COOK_FPS,  # add after 2 min
+}
+
+OBJ_GROUPS["meat_with_minimum_three_minutes"] = [
+    "steak",
+    "lamb_chop",
+    "pork_chop",
+    "sausage",
+    "pork_loin",
+    "chicken_breast",
+    "bacon",
+]
+OBJ_GROUPS["vegetable_with_maximum_three_minutes"] = [
+    "tomato",
+    "bell_pepper",
+    "onion",
+    "garlic",
+]
+OBJ_GROUPS["vegetables_after_x_minutes"] = [
+    "tomato",
+    "bell_pepper",
+    "onion",
+    "garlic",
+]
+OBJ_WAIT_TIMINGS = {
+    "tomato": 60 * COOK_FPS,  # add after 1 min
+    "bell_pepper": 60 * COOK_FPS,  # add after 1 min
+    "onion": 120 * COOK_FPS,  # add after 2 min
+    "garlic": 120 * COOK_FPS,  # add after 2 min
 }
