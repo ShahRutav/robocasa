@@ -34,7 +34,7 @@ def main():
     parser.add_argument("--directory", type=str, default="temp")
     parser.add_argument("-e", "--environment", type=str, default="SinkPlayEnv")
     parser.add_argument(
-        "--robots", nargs="+", default=["DemoTwoHand"], help="Which robot(s) to use."
+        "--robots", nargs="+", default=["PandaOmron"], help="Which robot(s) to use."
     )
     parser.add_argument(
         "--layout", nargs="+", type=int, default=[0], help="Layout ID(s)."

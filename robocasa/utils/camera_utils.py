@@ -116,6 +116,32 @@ CAM_CONFIGS = dict(
             quat=[0, 0.707107, 0.707107, 0],
             parent_body="robot0_right_hand",
         ),
+        robot0_agentview_center_topdown=dict(
+            pos=[0.3, 0.0, 1.0],
+            quat=[0.7071, 0.0, 0.0, 0.7071],  # 90° roll around Z
+            camera_attribs=dict(fovy="60"),
+            parent_body="mobilebase0_support",
+        ),
+        robot0_agentview_center_flipped=dict(
+            pos=[1.0, 0.0, 1.0],
+            quat=[
+                0.6036,
+                0.2500,
+                0.2500,
+                0.6036,
+            ],  # = [0.8536,0,0.3536,0] ⊗ [cos(90/2),0,0,sin(90/2)]
+            parent_body="mobilebase0_support",
+            camera_attribs=dict(fovy="60"),
+        ),
+        # Rotated 45° around Y
+        robot0_y_agentview_center_flipped_y=dict(
+            pos=[1.5, 0.0, 1.5],
+            quat=[0.8536, 0.0, 0.3536, 0.0],
+            parent_body="mobilebase0_support",
+            camera_attribs=dict(
+                fovy="60"
+            ),  # Increased field of view for broader height dimension
+        ),
     ),
     ### Add robot specific configs here ####
     PandaMobile=dict(),

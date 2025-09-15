@@ -479,6 +479,7 @@ class MemHeatPotMultiple(MultiTaskBase):
                 obj_groups=f"vegetables_after_x_minutes",
                 obj_registries=("objaverse", "aigen"),
                 graspable=True,
+                obj_scale=0.8,
                 placement=dict(
                     fixture=self.counter_stove_left,
                     size=(0.15, 0.15),
