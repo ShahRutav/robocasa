@@ -49,7 +49,9 @@ class ExplorationPolicy:
         """
         raise NotImplementedError("Subclasses must implement explore_env method")
 
-    def get_last_action(self, *args, **kwargs): # the subclass can override this method to return the last action
+    def get_last_action(
+        self, *args, **kwargs
+    ):  # the subclass can override this method to return the last action
         """
         Get the last action taken by the exploration policy.
         """
@@ -76,4 +78,12 @@ class ExplorationPolicy:
         quat_diff = T.quat_multiply(T.quat_inverse(target_quat), current_quat)
         euler_diff = T.mat2euler(T.quat2mat(quat_diff))
         condition = np.linalg.norm(euler_diff) < threshold
+        return condition
+
+    def _check_if_pos_reached(self, target_pos, current_pos, threshold=1e-2):
+        """
+        Check if the current position is close to the target position.
+        """
+        pos_diff = np.linalg.norm(target_pos - current_pos)
+        condition = pos_diff < threshold
         return condition

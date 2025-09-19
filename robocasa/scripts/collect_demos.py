@@ -36,7 +36,10 @@ import robocasa
 import robocasa.macros as macros
 from robocasa.models.fixtures import FixtureType
 from robocasa.utils.robomimic.robomimic_dataset_utils import convert_to_robomimic_format
-from robocasa.models.exploration_policy import RotateExplorationPolicy
+from robocasa.models.exploration_policy import (
+    RotateExplorationPolicy,
+    LRExplorationPolicy,
+)
 import select
 import sys
 
@@ -501,7 +504,7 @@ if __name__ == "__main__":
         default="datasets/memory",
     )
     parser.add_argument("--environment", type=str, default="Kitchen")
-    parser.add_argument("--seed", "-s", type=int, default=0)
+    parser.add_argument("--seed", "-s", type=int, default=0, required=True)
     parser.add_argument(
         "--n_demos", type=int, default=50, help="Number of demonstrations to collect"
     )
@@ -589,6 +592,13 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     control_seed(args.seed)
+    # if it is ending matches MemRetrieveOils*
+    if args.environment.startswith("MemRetrieveOils"):
+        args.explore_policy = "LRExplorationPolicy"
+    if args.environment.startswith("MemFruitInSink"):
+        args.explore_policy = "RotateExplorationPolicy"
+    print("Exploration policy:", args.explore_policy)
+
     for robot in args.robots:
         if "GR1" in robot:
             args.controller = "WHOLE_BODY_MINK_IK"
@@ -775,6 +785,8 @@ if __name__ == "__main__":
             if discard_traj and ep_directory is not None:
                 excluded_eps.append(ep_directory.split("/")[-1])
             if discard_traj:
+                if not confirm_user("continue collecting demos? (y/n)"):
+                    break
                 continue
             hdf5_path = gather_demonstrations_as_hdf5(
                 tmp_directory, new_dir, env_info, excluded_episodes=excluded_eps

@@ -1009,12 +1009,12 @@ class MemRetrieveOilsFromCounter(MultiTaskBase):
     def _check_success(self):
         if self.orig_canola_oil_pos == -1.0:
             return False
-        print(
-            "Canola oil pos",
-            OU.get_obj_pos(self, obj_name="canola_oil")[2],
-            " orig_canola_oil_pos",
-            self.orig_canola_oil_pos,
-        )
+        # print(
+        #     "Canola oil pos",
+        #     OU.get_obj_pos(self, obj_name="canola_oil")[2],
+        #     " orig_canola_oil_pos",
+        #     self.orig_canola_oil_pos,
+        # )
         return (
             OU.get_obj_pos(self, obj_name="canola_oil")[2]
             > self.orig_canola_oil_pos + 0.08
