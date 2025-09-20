@@ -512,7 +512,7 @@ if __name__ == "__main__":
         "--explore_policy",
         type=str,
         default="",
-        choices=["RotateExplorationPolicy"],
+        choices=["RotateExplorationPolicy", "LRExplorationPolicy"],
         help="Exploration policy to append to the demonstrations",
     )
     parser.add_argument(
