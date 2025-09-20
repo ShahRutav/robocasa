@@ -487,7 +487,7 @@ class MemHeatPotMultiple(MultiTaskBase):
                     sample_region_kwargs=dict(
                         ref=self.counter_stove_left,
                     ),
-                    offset=(0.4, 0.05),
+                    offset=(0.5, 0.05),
                 ),
             )
         )
