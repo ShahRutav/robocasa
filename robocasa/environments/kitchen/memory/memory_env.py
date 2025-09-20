@@ -997,33 +997,33 @@ class MemRetrieveOilsFromCounter(MultiTaskBase):
     def _reset_internal(self):
         super()._reset_internal()
         self.init_robot_base_pos = self.stove
-        self.orig_canola_oil_pos = -1.0
+        self.orig_olive_oil_pos = -1.0
         return
 
     def get_ep_meta(self):
         ep_meta = super().get_ep_meta()
-        obj_lang = self.get_obj_lang(obj_name="canola_oil")
+        obj_lang = self.get_obj_lang(obj_name="olive_oil")
         ep_meta["lang"] = f"Pick up the {obj_lang}."
         return ep_meta
 
     def _check_success(self):
-        if self.orig_canola_oil_pos == -1.0:
+        if self.orig_olive_oil_pos == -1.0:
             return False
         # print(
-        #     "Canola oil pos",
-        #     OU.get_obj_pos(self, obj_name="canola_oil")[2],
-        #     " orig_canola_oil_pos",
-        #     self.orig_canola_oil_pos,
+        #     "Olive oil pos",
+        #     OU.get_obj_pos(self, obj_name="olive_oil")[2],
+        #     " orig_olive_oil_pos",
+        #     self.orig_olive_oil_pos,
         # )
         return (
-            OU.get_obj_pos(self, obj_name="canola_oil")[2]
-            > self.orig_canola_oil_pos + 0.08
+            OU.get_obj_pos(self, obj_name="olive_oil")[2]
+            > self.orig_olive_oil_pos + 0.08
         )
 
     def step(self, action):
         obs, reward, done, info = super().step(action)
-        if (self._n_steps > 2) and (self.orig_canola_oil_pos == -1.0):
-            self.orig_canola_oil_pos = OU.get_obj_pos(self, obj_name="canola_oil")[2]
+        if (self._n_steps > 2) and (self.orig_olive_oil_pos == -1.0):
+            self.orig_olive_oil_pos = OU.get_obj_pos(self, obj_name="olive_oil")[2]
         self._n_steps += 1
         return obs, reward, done, info
 
