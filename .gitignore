@@ -143,3 +143,7 @@ robocasa/models/assets/textures
 
 # midjourney-generated textures
 robocasa/models/assets/generative_textures
+*hdf5
+casa_eval_datasets/*
+docs/*
+MimicDroidDataset/*
