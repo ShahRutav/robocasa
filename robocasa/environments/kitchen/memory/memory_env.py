@@ -1055,7 +1055,7 @@ class MemRetrieveOilsFromCounter(MultiTaskBase):
                 obj_groups=f"olive_oil",
                 obj_registries=("objaverse", "aigen"),
                 placement=dict(
-                    fixture=self.oil_container_counter_loc[2],
+                    fixture=self.oil_container_counter_loc2[2],
                     size=(0.4, 0.15),
                     pos=("ref", -1.0),
                     sample_region_kwargs=dict(
