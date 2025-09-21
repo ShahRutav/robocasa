@@ -1,0 +1,2 @@
+python robocasa/scripts/collect_demos.py --robot PandaOmron --environment MemRetrieveOilsFromCounterLL --device spacemouse --style 0 --layout 1 --ref_frame base --seed 47584 --skip_meta_file
+python robocasa/scripts/replay_casa_actions.py --prompt_file HDF5_FILE_PATH --robot_names PandaOmron --render
