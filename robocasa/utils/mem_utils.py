@@ -11,7 +11,10 @@ from typing import Optional, Union, List
 
 import robosuite
 from robosuite.utils.binding_utils import MjSimState
-from robosuite.controllers import load_composite_controller_config
+from robosuite.controllers import (
+    load_composite_controller_config,
+    load_part_controller_config,
+)
 
 import robocasa
 
@@ -191,26 +194,53 @@ def get_zero_action(env):
     return zero_action
 
 
+def load_controller_config(controller, robot, control_type, ref_frame):
+    if controller == "OSC_POSE":
+        return load_part_controller_config(
+            default_controller=controller,
+        )
+    if robot == "PandaOmron":
+        raise ValueError(
+            "Composite controller is not the one used for Robocasa default dataset. Use OSC_POSE for PandaOmron robots --controller OSC_POSE"
+        )
+    controller_config = load_composite_controller_config(
+        controller=controller,
+        robot=robot,
+    )
+    if "right" in controller_config["body_parts"]:
+        controller_config["body_parts"]["right"]["input_type"] = control_type
+        controller_config["body_parts"]["right"]["input_ref_frame"] = ref_frame
+    if "left" in controller_config["body_parts"]:
+        controller_config["body_parts"]["left"]["input_type"] = control_type
+        controller_config["body_parts"]["left"]["input_ref_frame"] = ref_frame
+    if "WHOLE_BODY" in controller_config["type"]:
+        controller_config["composite_controller_specific_configs"][
+            "ik_input_ref_frame"
+        ] = ref_frame
+        controller_config["composite_controller_specific_configs"][
+            "ik_input_type"
+        ] = control_type
+    return controller_config
+
+
 def make_env(file_name, env_args: EnvArgs):
     """Create environment from dataset file."""
     dataset_env_args = get_env_args_from_dataset(dataset_path=file_name)
     env_meta = get_env_meta_from_dataset(dataset_path=file_name, index=0)
     dataset_controller_config = dataset_env_args["env_kwargs"]["controller_configs"]
 
-    if env_args.controller is not None:
-        controller_config = load_controller_config(
-            controller=env_args.controller,
-            robot=env_args.robots
-            if isinstance(env_args.robots, str)
-            else env_args.robots[0],
-            control_type=dataset_controller_config["body_parts"]["right"]["input_type"],
-            ref_frame=dataset_controller_config["body_parts"]["right"][
-                "input_ref_frame"
-            ],
-        )
-    else:
-        print("No controller specified. Using default controller from the dataset")
-        controller_config = dataset_controller_config
+    controller_config = load_controller_config(
+        controller=env_args.controller,
+        robot=env_args.robots
+        if isinstance(env_args.robots, str)
+        else env_args.robots[0],
+        control_type=dataset_controller_config["body_parts"]["right"]["input_type"]
+        if "body_parts" in dataset_controller_config
+        else "delta",
+        ref_frame=dataset_controller_config["body_parts"]["right"]["input_ref_frame"]
+        if "body_parts" in dataset_controller_config
+        else "base",
+    )
 
     env_name = dataset_env_args["env_name"]
     env_kwargs = dataset_env_args["env_kwargs"]

@@ -541,7 +541,15 @@ class Kitchen(ManipulationEnv, metaclass=KitchenEnvMeta):
             robot_model.set_base_ori(robot_base_ori)
 
             # create and place objects
-            self._create_objects()
+            try:
+                self._create_objects()
+            except RandomizationError as e:
+                if macros.VERBOSE:
+                    print(
+                        f"Could not create objects. Trying again with self._load_model(). Attempt {ind}"
+                    )
+                ind += 1
+                continue
 
             # setup object locations
             try:
@@ -596,9 +604,6 @@ class Kitchen(ManipulationEnv, metaclass=KitchenEnvMeta):
             for obj_num, cfg in enumerate(self.object_cfgs):
                 if "name" not in cfg:
                     cfg["name"] = "obj_{}".format(obj_num + 1)
-                # if cfg["name"] == "obj":
-                #     cfg["placement"]["size"] = (0.1, 0.1)
-                #     self.object_cfgs[obj_num]["placement"]["size"] = cfg["placement"]["size"]
                 model, info = self._create_obj(cfg)
                 cfg["info"] = info
                 self.objects[model.name] = model
@@ -606,11 +611,25 @@ class Kitchen(ManipulationEnv, metaclass=KitchenEnvMeta):
         else:
             self.object_cfgs = self._get_obj_cfgs()
             addl_obj_cfgs = []
+            unique_cats = set()
             for obj_num, cfg in enumerate(self.object_cfgs):
                 cfg["type"] = "object"
                 if "name" not in cfg:
                     cfg["name"] = "obj_{}".format(obj_num + 1)
-                model, info = self._create_obj(cfg)
+                for attempt in range(10):
+                    model, info = self._create_obj(cfg)
+                    obj_cat = info["cat"]
+                    if cfg.get("keep_cat_unique", False):
+                        if obj_cat in unique_cats:
+                            if attempt == 9:
+                                raise RandomizationError(
+                                    f"Category {obj_cat} is not unique."
+                                )
+                            continue
+                        unique_cats.add(obj_cat)
+                    break
+                if macros.VERBOSE:
+                    print(f"Created {model.name=} with category {obj_cat}")
                 cfg["info"] = info
                 self.objects[model.name] = model
                 self.model.merge_objects([model])
