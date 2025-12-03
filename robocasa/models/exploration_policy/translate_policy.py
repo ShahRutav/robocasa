@@ -2,6 +2,7 @@ import numpy as np
 
 import robosuite
 import robosuite.utils.transform_utils as T
+import robocasa.macros as macros
 from .base import ExplorationPolicy
 
 
@@ -40,11 +41,12 @@ class LRExplorationPolicy(ExplorationPolicy):
         Returns slower velocity when very close to destination.
         """
         distance = np.abs(target_pos[0] - current_pos[0])
-        print(
-            f"Target pos: {target_pos}",
-            f"Current pos: {current_pos}",
-            f"Distance: {distance}",
-        )
+        if macros.VERBOSE:
+            print(
+                f"Target pos: {target_pos}",
+                f"Current pos: {current_pos}",
+                f"Distance: {distance}",
+            )
 
         if distance <= self.slow_distance:
             scale_factor = max(
@@ -53,7 +55,8 @@ class LRExplorationPolicy(ExplorationPolicy):
             scaled_velocity = (
                 self.min_velocity + (base_velocity - self.min_velocity) * scale_factor
             )
-            print(f"Scaled velocity: {scaled_velocity}")
+            if macros.VERBOSE:
+                print(f"Scaled velocity: {scaled_velocity}")
         else:
             scaled_velocity = base_velocity
 
