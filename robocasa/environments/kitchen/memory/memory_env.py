@@ -22,8 +22,40 @@ class MultiTaskBase(Kitchen):
         super().__init__(*args, **kwargs)
 
     def _reset_internal(self):
+        """
+        Resets simulation internal configurations.
+        Also resets the common per-episode step counter.
+        """
         self._n_steps = 0
         return super()._reset_internal()
+
+    def _post_action(self, action):
+        """
+        Common post-action hook for all memory tasks.
+
+        Delegates to the parent implementation (which handles reward / done / info
+        and fixture state updates), then:
+        - Increments a shared step counter
+        - Invokes a task-specific per-step update hook
+        """
+        reward, done, info = super()._post_action(action)
+
+        # Common bookkeeping for all multitask environments
+        self._n_steps += 1
+
+        # Task-specific per-step updates
+        self._post_step_update()
+
+        return reward, done, info
+
+    def _post_step_update(self):
+        """
+        Per-step hook for subclasses.
+
+        Subclasses can override this instead of overriding env.step(...) directly
+        when they need custom per-step logic / bookkeeping.
+        """
+        return
 
     def _setup_kitchen_references(self):
         super()._setup_kitchen_references()
@@ -83,14 +115,7 @@ class MultiTaskBase(Kitchen):
         return ep_meta
 
     def _remove_specific_fixtures(self):
-        remove_keys = [
-            # "toaster_main_group",
-            # "toaster_right_group",
-            # "toaster_left_group",
-            # "coffee_machine_left_group",
-            # "coffee_machine_right_group",
-            # "coffee_machine_main_group",
-        ]
+        remove_keys = []
         self.fixtures = {
             key: value for key, value in self.fixtures.items() if key not in remove_keys
         }
@@ -298,7 +323,6 @@ class MemHeatPot(MultiTaskBase):
         knobs_state = self.stove.get_knobs_state(env=self)
         obj = self.objects[obj_name]
         obj_pos = np.array(self.sim.data.body_xpos[self.obj_body_id[obj.name]])[0:2]
-        print("*" * 20)
         location_dist_list = []
         for location, site in self.stove.burner_sites.items():
             if site is not None:
@@ -313,12 +337,13 @@ class MemHeatPot(MultiTaskBase):
         if obj_on_site:
             return location
         else:
-            print(
-                colored(
-                    f"Closest knob is {location} but dist is {dist:.3f} which is greater than threshold {threshold:.2f}",
-                    "red",
+            if macros.DEBUG:
+                print(
+                    colored(
+                        f"Closest knob is {location} but dist is {dist:.3f} which is greater than threshold {threshold:.2f}",
+                        "red",
+                    )
                 )
-            )
         return None
 
     def _get_obj_cfgs(self):
@@ -345,30 +370,27 @@ class MemHeatPot(MultiTaskBase):
                                 locs=[self.pan_location_on_stove],
                             ),
                         ),
-                        # rotation=[
-                        #     (np.pi / 2 - np.pi / 16, np.pi / 2 + np.pi / 16),
-                        # ],
                     ),
                 ),
             )
         )
         return cfgs
 
-    def step(self, action):
-        obs, reward, done, info = super().step(action)
+    def _post_step_update(self):
         is_stove_on = self._check_stove_on(self.knob)
         if not self.turn_on_stove_success:  # we have not turned on the stove yet
             if is_stove_on:
-                print("*" * 100)
-                print("stove turned on")
+                if macros.DEBUG:
+                    print("stove turned on")
                 self.turn_on_stove_success = True
                 self.stove_wait_timer = 0
         elif is_stove_on:  # we have turned on the stove and it is still on
             self.count_empty_actions = True
             self.stove_wait_timer += 1
-            print(
-                f"stove wait timer: {self.stove_wait_timer}/{self.stove_wait_timer_threshold}"
-            )
+            if macros.DEBUG:
+                print(
+                    f"stove wait timer: {self.stove_wait_timer}/{self.stove_wait_timer_threshold}"
+                )
 
         # we know that the stove is on, and we have waited for a while but not too much, so we can turn it off
         if (
@@ -377,13 +399,11 @@ class MemHeatPot(MultiTaskBase):
             and (self.stove_wait_timer < self.stove_wait_timer_max_threshold)
         ):  # we have turned on the stove and it has been on for a while
             self.count_empty_actions = False  # stop recording empty actions
-            if macros.SHOW_SITES:  # only during debugging or data collection
+            if macros.DEBUG:  # only during debugging or data collection
                 print("CLOSE STOVE!!!!!")
             self.turn_off_stove_success = not self._check_stove_on(self.knob)
-            if macros.SHOW_SITES:
+            if macros.DEBUG:
                 print("stove turned off")
-                print("*" * 100)
-        return obs, reward, done, info
 
     def _check_success(self):
         return (
@@ -494,19 +514,18 @@ class MemHeatPotMultiple(MultiTaskBase):
 
         return cfgs
 
-    def step(self, action):
-        obs, reward, done, info = super().step(action)
+    def _post_step_update(self):
         is_stove_on = self._check_stove_on(self.knob)
         if not self.turn_on_stove_success:  # we have not turned on the stove yet
             if is_stove_on:  # check if just turned it on
-                print("*" * 100)
-                print("stove turned on")
+                if macros.DEBUG:
+                    print("stove turned on")
                 self.turn_on_stove_success = True
                 self.stove_wait_timer = 0  # start the timer for the meat
         elif is_stove_on:  # we have turned on the stove and it is still on
             self.count_empty_actions = True
             self.stove_wait_timer += 1
-            if macros.SHOW_SITES:
+            if macros.DEBUG:
                 if not self.veggie_add_success:
                     print(
                         f"veggie timer: {self.stove_wait_timer}/{self.veggie_add_time_threshold}; stove timer: {self.stove_wait_timer}/{self.stove_wait_timer_max_threshold}"
@@ -529,7 +548,7 @@ class MemHeatPotMultiple(MultiTaskBase):
             )  # stove is on within the max threshold to add the veggie
         ):
             if (
-                macros.SHOW_SITES
+                macros.DEBUG
             ):  # print to indicate that is is about time to add the veggie
                 print("ADD VEGGIE!!!!!")
 
@@ -543,7 +562,7 @@ class MemHeatPotMultiple(MultiTaskBase):
             and (self.veggie_add_time <= self.veggie_add_time_max_threshold)
         ):
             self.veggie_add_success = True
-            if macros.SHOW_SITES and self.veggie_add_success:
+            if macros.DEBUG and self.veggie_add_success:
                 print("VEGGIE ADDED!!!!!")
 
         # we know that the stove is on and veggie is added, and we have waited for a while but not too much, so we can turn it off
@@ -554,15 +573,12 @@ class MemHeatPotMultiple(MultiTaskBase):
             and (self.stove_wait_timer <= self.stove_wait_timer_max_threshold)
         ):  # we have turned on the stove and it has been on for a while
             self.count_empty_actions = False  # stop recording empty actions
-            if macros.SHOW_SITES:  # only during debugging or data collection
+            if macros.DEBUG:  # only during debugging or data collection
                 print("CLOSE STOVE!!!!!")
             self.turn_off_stove_success = not self._check_stove_on(self.knob)
-            if macros.SHOW_SITES and self.turn_off_stove_success:
+            if macros.DEBUG and self.turn_off_stove_success:
                 print("stove turned off")
                 print("*" * 100)
-
-        self._n_steps += 1
-        return obs, reward, done, info
 
     def _update_veggie_add_time(self):
         if (
@@ -572,9 +588,10 @@ class MemHeatPotMultiple(MultiTaskBase):
             and (self.veggie_add_time == 0)
         ):
             self.veggie_add_time = self.stove_wait_timer
-            print(
-                f"VEGGIE ADDED AT {self.veggie_add_time} steps after stove was turned on"
-            )
+            if macros.DEBUG:
+                print(
+                    f"VEGGIE ADDED AT {self.veggie_add_time} steps after stove was turned on"
+                )
         return
 
     def _check_veggie_on_pan(self):
@@ -682,14 +699,19 @@ class MemWashAndReturn(MultiTaskBase):
         return
 
     def reset(self, *args, **kwargs):
+        """
+        After a full environment reset, immediately update success flags once,
+        then rely on the per-step hook for subsequent updates.
+        """
         obs = super().reset(*args, **kwargs)
         self._update_success()
         return obs
 
-    def step(self, action):
-        obs, reward, done, info = super().step(action)
+    def _post_step_update(self):
+        """
+        Track whether the fruit has been placed in the sink and then returned.
+        """
         self._update_success()
-        return obs, reward, done, info
 
     def _check_success(self):
         return self.place_success and self.final_success
@@ -790,21 +812,6 @@ class MemWashAndReturnSameLocation(MemWashAndReturn):
             is_gripper_far = OU.gripper_obj_far(self, obj_name=obj_name)
             self.final_success = is_in and is_gripper_far
         return
-
-    def _check_success(self):
-        return self.place_success and self.final_success
-
-    def step(self, action):
-        obs, reward, done, info = super().step(action)
-        self._update_success()
-        self._n_steps += 1
-        return obs, reward, done, info
-
-    def reset(self, *args, **kwargs):
-        obs = super().reset(*args, **kwargs)
-        self._update_success()
-        self._n_steps = 0
-        return obs
 
     def _get_obj_cfgs(self):
         split_type = self.split_type()
@@ -1009,23 +1016,14 @@ class MemRetrieveOilsFromCounter(MultiTaskBase):
     def _check_success(self):
         if self.orig_olive_oil_pos == -1.0:
             return False
-        # print(
-        #     "Olive oil pos",
-        #     OU.get_obj_pos(self, obj_name="olive_oil")[2],
-        #     " orig_olive_oil_pos",
-        #     self.orig_olive_oil_pos,
-        # )
         return (
             OU.get_obj_pos(self, obj_name="olive_oil")[2]
             > self.orig_olive_oil_pos + 0.08
         )
 
-    def step(self, action):
-        obs, reward, done, info = super().step(action)
+    def _post_step_update(self):
         if (self._n_steps > 2) and (self.orig_olive_oil_pos == -1.0):
             self.orig_olive_oil_pos = OU.get_obj_pos(self, obj_name="olive_oil")[2]
-        self._n_steps += 1
-        return obs, reward, done, info
 
     def _get_obj_cfgs(self):
         split_type = self.split_type()
