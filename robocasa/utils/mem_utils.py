@@ -8,6 +8,8 @@ import numpy as np
 import xml.etree.ElementTree as ET
 from dataclasses import dataclass
 from typing import Optional, Union, List
+from lxml import etree
+from pathlib import Path
 
 import robosuite
 from robosuite.utils.binding_utils import MjSimState
@@ -17,6 +19,39 @@ from robosuite.controllers import (
 )
 
 import robocasa
+
+
+def fix_asset_paths_relative_to_robocasa(
+    xml_string, robocasa_module, robocasa_marker="robocasa/models/assets"
+):
+    """
+    Replace all asset file paths in the xml string so that the prefix up to 'robocasa'
+    is replaced with the robocasa installation path.
+
+    Args:
+        xml_string (str): Original MJCF XML as string
+        robocasa_module: The imported `robocasa` module (or any module within it)
+        robocasa_marker (str): Folder name to identify the point in path replacement
+    """
+    # Parse and fix XML
+    root = etree.fromstring(xml_string)
+    for tag in ["mesh", "texture", "heightfield"]:
+        for elem in root.findall(f".//{tag}"):
+            file_attr = elem.get("file")
+            if file_attr:
+                # Replace only if absolute and contains old robocasa path
+                if file_attr.startswith("/"):
+                    # parts = Path(file_attr).parts
+                    # find out what is the index of the robocasa marker
+                    idx = file_attr.find(robocasa_marker)
+                    if idx != -1:
+                        curr_home_path = "/".join(robocasa.__file__.split("/")[:-2])
+                        rel_path = file_attr[idx:]
+                        new_path = os.path.join(curr_home_path, rel_path)
+                        new_path = Path(new_path).resolve()
+                        elem.set("file", str(new_path))
+
+    return etree.tostring(root, pretty_print=True).decode("utf-8")
 
 
 @dataclass
@@ -244,7 +279,6 @@ def make_env(file_name, env_args: EnvArgs):
 
     env_name = dataset_env_args["env_name"]
     env_kwargs = dataset_env_args["env_kwargs"]
-    print("Env name: ", env_name)
 
     env_kwargs["eval_mode"] = env_args.reset_mode
     env_kwargs["env_name"] = env_name
@@ -259,23 +293,19 @@ def make_env(file_name, env_args: EnvArgs):
     env_kwargs.pop("use_camera_obs", None)
     env_kwargs.pop("renderer", None)
     env_kwargs.pop("camera_segmentations", None)
-    print(f"Env args: {dataset_env_args}")
-
-    print("Rendering the environment: ", env_args.render)
-    print(f"Control frequency: {env_args.control_freq}")
 
     env = robosuite.make(
         has_renderer=env_args.render,
         use_camera_obs=env_args.use_camera_obs,
         renderer="mujoco",
-        camera_segmentations="segmentation_level",
+        camera_segmentations="instance",
         control_freq=env_args.control_freq,
         **env_kwargs,
     )
     return env, env_kwargs
 
 
-def reset_to(env, state, replace_robot_joints=True, change_to_gr1=False):
+def reset_to(env, state):
     """
     Reset to a specific simulator state.
 
@@ -310,12 +340,6 @@ def reset_to(env, state, replace_robot_joints=True, change_to_gr1=False):
         # that is only a "soft" reset that doesn't actually reload the model.
         env.reset()
         robosuite_version_id = int(robosuite.__version__.split(".")[1])
-        # we need to first update state["model"] to replace the robot tag with the current robot
-        curr_xml = env.sim.model.get_xml()
-        # if state["model"] != curr_xml:
-
-        # state["model"] = xml
-
         if robosuite_version_id <= 3:
             from robosuite.utils.mjcf_utils import postprocess_model_xml
 
@@ -324,55 +348,18 @@ def reset_to(env, state, replace_robot_joints=True, change_to_gr1=False):
             # v1.4 and above use the class-based edit_model_xml function
             xml = env.edit_model_xml(state["model"])
 
-        # with open("new_model.xml", "w") as f:
-        #     f.write(xml)
-        if change_to_gr1:
-            xml = replace_robot_tag(new_model_xml=xml, old_model_xml=curr_xml)
-        # # save the current model xml
-        # with open("current_model.xml", "w") as f:
-        #     f.write(curr_xml)
-        # with open("updated_model.xml", "w") as f:
-        #     f.write(xml)
-
+        xml = fix_asset_paths_relative_to_robocasa(
+            xml_string=xml, robocasa_module=robocasa
+        )
         env.reset_from_xml_string(xml)
-        # env.sim.reset(): resets the robot back to some position which has collision with the table. Change the xml?
         env.sim.reset()
-        env.robots[0].reset()
-        env.sim.forward()
         # hide teleop visualization after restoring from model
         # env.sim.model.site_rgba[env.eef_site_id] = np.array([0., 0., 0., 0.])
         # env.sim.model.site_rgba[env.eef_cylinder_id] = np.array([0., 0., 0., 0.])
     if "states" in state:
-        if replace_robot_joints:
-            print("Replacing robot joints")
-            robot_indices = env.robots[0]._ref_joint_pos_indexes
-            other_indices = set(
-                range(env.sim.get_state().qpos.flatten().shape[0])
-            ) - set(robot_indices)
-            other_indices = sorted(list(other_indices))
-
-            non_robot_qpos_idx = state["non_robot_qpos_idx"]
-            assert len(non_robot_qpos_idx) == len(
-                other_indices
-            ), f"Mismatch in non_robot_qpos_idx: {len(non_robot_qpos_idx)} != {len(other_indices)}"
-            qpos_state = state["qpos_state"]
-            time = env.sim.data.time
-            qvel = env.sim.get_state().qvel.flatten().copy()
-            qpos = env.sim.get_state().qpos.flatten().copy()
-            # copy over everything except the robot state
-            for curr_idx, state_idx in zip(other_indices, non_robot_qpos_idx):
-                qpos[curr_idx] = qpos_state[state_idx]
-            curr_state = MjSimState(qpos=qpos, qvel=qvel, time=time)
-            env.sim.set_state_from_flattened(curr_state.flatten())
-            env.sim.forward()
-            should_ret = True
-        else:
-            env.sim.set_state_from_flattened(state["states"])
+        env.sim.set_state_from_flattened(state["states"])
         env.sim.forward()
         should_ret = True
-        if replace_robot_joints:
-            env.robots[0].reset()
-            env.sim.forward()
 
     # update state as needed
     if hasattr(env, "update_sites"):

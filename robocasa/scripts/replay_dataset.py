@@ -77,7 +77,9 @@ def create_keys_info():
     }
 
 
-def replay_episode(env, hdf5_path, ep_name, env_args: EnvArgs):
+def replay_episode(
+    env, hdf5_path, ep_name, env_args: EnvArgs, args: argparse.Namespace
+):
     """Replay a single episode from the dataset."""
     print(colored(f"Replaying episode: {ep_name}", "blue"))
 
@@ -116,16 +118,12 @@ def replay_episode(env, hdf5_path, ep_name, env_args: EnvArgs):
 
     # Reset environment to initial state
     print(colored("Resetting environment to initial state...", "yellow"))
-    reset_to(
-        env,
-        initial_state,
-        replace_robot_joints=True,
-        change_to_gr1="GR1" in env_args.robots,
-    )
+    reset_to(env=env, state=initial_state)
 
     # Replay actions
     print(colored(f"Replaying {len(actions)} actions...", "yellow"))
 
+    done = False
     for i, action in enumerate(actions):
         if env_args.render:
             # Render the environment
@@ -133,7 +131,13 @@ def replay_episode(env, hdf5_path, ep_name, env_args: EnvArgs):
             time.sleep(0.05)  # Small delay for visualization
 
         # Step the environment
-        obs, reward, done, info = env.step(action)
+        if args.state_replay:
+            state = {
+                "states": states[i],
+            }
+            reset_to(env, state)
+        else:
+            obs, reward, done, info = env.step(action)
 
         if hasattr(env_args, "verbose") and env_args.verbose:
             print(f"Step {i+1}/{len(actions)}: Action={action[:3]}... (first 3 dims)")
@@ -188,6 +192,12 @@ def main():
         default=False,
         help="Whether to return camera observations",
     )
+    parser.add_argument(
+        "--state_replay",
+        action="store_true",
+        default=False,
+        help="Whether to replay the state of the environment",
+    )
     parser.add_argument("--reset_mode", type=str, default=None, help="Reset mode")
     args = parser.parse_args()
 
@@ -202,12 +212,14 @@ def main():
 
     # Create keys_info
     keys_info = create_keys_info()
+    if args.robots == "PandaOmron":
+        args.controller = "OSC_POSE"
 
     env_args_obj = EnvArgs(
         robots=args.robots,
         render=args.render,
         control_freq=20,
-        controller="WHOLE_BODY_MINK_IK" if "GR1" in args.robots else None,
+        controller=args.controller,
         use_camera_obs=args.use_camera_obs,
     )
 
@@ -239,7 +251,7 @@ def main():
         print(colored(f"Episode {i+1}/{total_episodes}: {ep_name}", "cyan"))
         print(colored(f"{'='*50}", "cyan"))
 
-        replay_episode(env, hdf5_path, ep_name, env_args_obj)
+        replay_episode(env, hdf5_path, ep_name, env_args_obj, args)
 
     # Print summary
     print(colored(f"\n{'='*50}", "cyan"))

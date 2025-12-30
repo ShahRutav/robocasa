@@ -14,38 +14,7 @@ import robosuite
 import robocasa
 import robocasa.utils.robomimic.robomimic_obs_utils as ObsUtils
 
-
-def fix_asset_paths_relative_to_robocasa(
-    xml_string, robocasa_module, robocasa_marker="robocasa/models/assets"
-):
-    """
-    Replace all asset file paths in the xml string so that the prefix up to 'robocasa'
-    is replaced with the robocasa installation path.
-
-    Args:
-        xml_string (str): Original MJCF XML as string
-        robocasa_module: The imported `robocasa` module (or any module within it)
-        robocasa_marker (str): Folder name to identify the point in path replacement
-    """
-    # Parse and fix XML
-    root = etree.fromstring(xml_string)
-    for tag in ["mesh", "texture", "heightfield"]:
-        for elem in root.findall(f".//{tag}"):
-            file_attr = elem.get("file")
-            if file_attr:
-                # Replace only if absolute and contains old robocasa path
-                if file_attr.startswith("/"):
-                    # parts = Path(file_attr).parts
-                    # find out what is the index of the robocasa marker
-                    idx = file_attr.find(robocasa_marker)
-                    if idx != -1:
-                        curr_home_path = "/".join(robocasa.__file__.split("/")[:-2])
-                        rel_path = file_attr[idx:]
-                        new_path = os.path.join(curr_home_path, rel_path)
-                        new_path = Path(new_path).resolve()
-                        elem.set("file", str(new_path))
-
-    return etree.tostring(root, pretty_print=True).decode("utf-8")
+from robocasa.utils.mem_utils import fix_asset_paths_relative_to_robocasa
 
 
 class EnvRobocasa:

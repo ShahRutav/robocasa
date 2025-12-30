@@ -337,7 +337,7 @@ class MemHeatPot(MultiTaskBase):
         if obj_on_site:
             return location
         else:
-            if macros.DEBUG:
+            if macros.VERBOSE:
                 print(
                     colored(
                         f"Closest knob is {location} but dist is {dist:.3f} which is greater than threshold {threshold:.2f}",
@@ -380,14 +380,14 @@ class MemHeatPot(MultiTaskBase):
         is_stove_on = self._check_stove_on(self.knob)
         if not self.turn_on_stove_success:  # we have not turned on the stove yet
             if is_stove_on:
-                if macros.DEBUG:
+                if macros.VERBOSE:
                     print("stove turned on")
                 self.turn_on_stove_success = True
                 self.stove_wait_timer = 0
         elif is_stove_on:  # we have turned on the stove and it is still on
             self.count_empty_actions = True
             self.stove_wait_timer += 1
-            if macros.DEBUG:
+            if macros.VERBOSE:
                 print(
                     f"stove wait timer: {self.stove_wait_timer}/{self.stove_wait_timer_threshold}"
                 )
@@ -399,10 +399,10 @@ class MemHeatPot(MultiTaskBase):
             and (self.stove_wait_timer < self.stove_wait_timer_max_threshold)
         ):  # we have turned on the stove and it has been on for a while
             self.count_empty_actions = False  # stop recording empty actions
-            if macros.DEBUG:  # only during debugging or data collection
+            if macros.VERBOSE:  # only during debugging or data collection
                 print("CLOSE STOVE!!!!!")
             self.turn_off_stove_success = not self._check_stove_on(self.knob)
-            if macros.DEBUG:
+            if macros.VERBOSE:
                 print("stove turned off")
 
     def _check_success(self):
@@ -518,14 +518,14 @@ class MemHeatPotMultiple(MultiTaskBase):
         is_stove_on = self._check_stove_on(self.knob)
         if not self.turn_on_stove_success:  # we have not turned on the stove yet
             if is_stove_on:  # check if just turned it on
-                if macros.DEBUG:
+                if macros.VERBOSE:
                     print("stove turned on")
                 self.turn_on_stove_success = True
                 self.stove_wait_timer = 0  # start the timer for the meat
         elif is_stove_on:  # we have turned on the stove and it is still on
             self.count_empty_actions = True
             self.stove_wait_timer += 1
-            if macros.DEBUG:
+            if macros.VERBOSE:
                 if not self.veggie_add_success:
                     print(
                         f"veggie timer: {self.stove_wait_timer}/{self.veggie_add_time_threshold}; stove timer: {self.stove_wait_timer}/{self.stove_wait_timer_max_threshold}"
@@ -548,7 +548,7 @@ class MemHeatPotMultiple(MultiTaskBase):
             )  # stove is on within the max threshold to add the veggie
         ):
             if (
-                macros.DEBUG
+                macros.VERBOSE
             ):  # print to indicate that is is about time to add the veggie
                 print("ADD VEGGIE!!!!!")
 
@@ -562,7 +562,7 @@ class MemHeatPotMultiple(MultiTaskBase):
             and (self.veggie_add_time <= self.veggie_add_time_max_threshold)
         ):
             self.veggie_add_success = True
-            if macros.DEBUG and self.veggie_add_success:
+            if macros.VERBOSE and self.veggie_add_success:
                 print("VEGGIE ADDED!!!!!")
 
         # we know that the stove is on and veggie is added, and we have waited for a while but not too much, so we can turn it off
@@ -573,10 +573,10 @@ class MemHeatPotMultiple(MultiTaskBase):
             and (self.stove_wait_timer <= self.stove_wait_timer_max_threshold)
         ):  # we have turned on the stove and it has been on for a while
             self.count_empty_actions = False  # stop recording empty actions
-            if macros.DEBUG:  # only during debugging or data collection
+            if macros.VERBOSE:  # only during debugging or data collection
                 print("CLOSE STOVE!!!!!")
             self.turn_off_stove_success = not self._check_stove_on(self.knob)
-            if macros.DEBUG and self.turn_off_stove_success:
+            if macros.VERBOSE and self.turn_off_stove_success:
                 print("stove turned off")
                 print("*" * 100)
 
@@ -588,7 +588,7 @@ class MemHeatPotMultiple(MultiTaskBase):
             and (self.veggie_add_time == 0)
         ):
             self.veggie_add_time = self.stove_wait_timer
-            if macros.DEBUG:
+            if macros.VERBOSE:
                 print(
                     f"VEGGIE ADDED AT {self.veggie_add_time} steps after stove was turned on"
                 )
