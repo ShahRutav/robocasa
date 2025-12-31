@@ -34,11 +34,12 @@ from robosuite.controllers import (
     load_composite_controller_config,
     load_part_controller_config,
 )
-from robosuite.wrappers import DataCollectionWrapper, VisualizationWrapper
+from robosuite.wrappers import VisualizationWrapper
 from robosuite.utils.control_utils import convert_delta_to_abs_action
 
 import robocasa
 import robocasa.macros as macros
+from robocasa.wrappers import DataCollectionWrapper
 from robocasa.models.fixtures import FixtureType
 from robocasa.utils.robomimic.robomimic_dataset_utils import convert_to_robomimic_format
 from robocasa.models.exploration_policy import (
