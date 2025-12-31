@@ -35,11 +35,10 @@ from robosuite.controllers import (
     load_part_controller_config,
 )
 from robosuite.wrappers import VisualizationWrapper
-from robosuite.utils.control_utils import convert_delta_to_abs_action
 
 import robocasa
 import robocasa.macros as macros
-from robocasa.wrappers import DataCollectionWrapper
+from robocasa.wrappers.data_collection_wrapper import DataCollectionWrapper
 from robocasa.models.fixtures import FixtureType
 from robocasa.utils.robomimic.robomimic_dataset_utils import convert_to_robomimic_format
 from robocasa.models.exploration_policy import (
@@ -269,10 +268,7 @@ def collect_human_trajectory(
     for arm in arms:
         # controller has absolute actions, so we need to set the initial action to be the current position
         zero_action = np.zeros(7)
-        if active_robot.part_controllers[arm].input_type == "absolute":
-            zero_action = convert_delta_to_abs_action(
-                zero_action, active_robot, arm, env
-            )
+        assert active_robot.part_controllers[arm].input_type != "absolute"
         zero_action_dict[f"{arm}"] = zero_action[: zero_action.shape[0] - 1]
         zero_action_dict[f"{arm}_gripper"] = zero_action[zero_action.shape[0] - 1 :]
     zero_action_dict["base_mode"] = -1

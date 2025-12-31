@@ -19,8 +19,6 @@ sys.path.append(os.path.join(os.path.dirname(__file__), "../../../icrt"))
 
 import robocasa
 import robocasa.macros as macros
-from robocasa.environments.kitchen.play_env.play_env import *
-
 from robocasa.utils.mem_utils import make_env, reset_to, EnvArgs
 
 

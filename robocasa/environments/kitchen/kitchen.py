@@ -19,7 +19,6 @@ from robosuite.environments.base import EnvMeta
 from scipy.spatial.transform import Rotation
 
 from robosuite.models.robots import PandaOmron
-from robosuite.utils.control_utils import convert_delta_to_abs_action
 
 import robocasa
 import robocasa.macros as macros
@@ -1078,11 +1077,9 @@ class Kitchen(ManipulationEnv, metaclass=KitchenEnvMeta):
                         f"Not implemented for action dimension: {action_dim}"
                     )
                 # base_action = action[-base_action_dim:]
-                if robot.part_controllers[arm].input_type == "absolute":
-                    assert (
-                        len(self.robots) == 1
-                    ), "Only one robot is supported for now. It can be easily extended."
-                    action = convert_delta_to_abs_action(action, robot, arm, self)
+                assert (
+                    robot.part_controllers[arm].input_type != "absolute"
+                ), "Only delta input type is supported for now"
                 action_dict[arm] = action[: action.shape[0] - 1]
                 action_dict[arm + "_gripper"] = action[action.shape[0] - 1 :]
         action = robot.create_action_vector(action_dict)
