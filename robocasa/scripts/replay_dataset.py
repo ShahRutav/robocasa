@@ -139,6 +139,9 @@ def replay_episode(
         else:
             obs, reward, done, info = env.step(action)
 
+        if done or env._check_success():
+            print(f"done: {done}, success: {env._check_success()}")
+
         if hasattr(env_args, "verbose") and env_args.verbose:
             print(f"Step {i+1}/{len(actions)}: Action={action[:3]}... (first 3 dims)")
 

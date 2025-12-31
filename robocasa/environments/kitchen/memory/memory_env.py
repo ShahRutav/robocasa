@@ -27,6 +27,7 @@ class MultiTaskBase(Kitchen):
         Also resets the common per-episode step counter.
         """
         self._n_steps = 0
+        self.failed_task = False
         return super()._reset_internal()
 
     def _post_action(self, action):
@@ -45,6 +46,11 @@ class MultiTaskBase(Kitchen):
 
         # Task-specific per-step updates
         self._post_step_update()
+
+        # check if the task has failed
+        if self.failed_task:
+            done = True
+            info["success"] = False
 
         return reward, done, info
 
@@ -402,8 +408,14 @@ class MemHeatPot(MultiTaskBase):
             if macros.VERBOSE:  # only during debugging or data collection
                 print("CLOSE STOVE!!!!!")
             self.turn_off_stove_success = not self._check_stove_on(self.knob)
-            if macros.VERBOSE:
+            if macros.VERBOSE and self.turn_off_stove_success:
                 print("stove turned off")
+        elif self.turn_on_stove_success and (
+            self.stove_wait_timer >= self.stove_wait_timer_max_threshold
+        ):
+            if macros.VERBOSE:
+                print("Failed at the task.")
+            self.failed_task = True
 
     def _check_success(self):
         return (
@@ -551,6 +563,14 @@ class MemHeatPotMultiple(MultiTaskBase):
                 macros.VERBOSE
             ):  # print to indicate that is is about time to add the veggie
                 print("ADD VEGGIE!!!!!")
+        elif (
+            self.turn_on_stove_success
+            and not self.veggie_add_success
+            and (self.stove_wait_timer > self.veggie_add_time_max_threshold)
+        ):
+            if macros.VERBOSE:
+                print("Failed to add the veggie on time.")
+            self.failed_task = True
 
         # check if the veggie is added. if added, mark it as success.
         if (
@@ -579,6 +599,14 @@ class MemHeatPotMultiple(MultiTaskBase):
             if macros.VERBOSE and self.turn_off_stove_success:
                 print("stove turned off")
                 print("*" * 100)
+        elif (
+            self.turn_on_stove_success
+            and self.veggie_add_success
+            and (self.stove_wait_timer > self.stove_wait_timer_max_threshold)
+        ):
+            if macros.VERBOSE:
+                print("Failed to turn off the stove on time.")
+            self.failed_task = True
 
     def _update_veggie_add_time(self):
         if (

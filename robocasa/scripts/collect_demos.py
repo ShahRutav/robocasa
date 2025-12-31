@@ -50,6 +50,7 @@ import select
 import sys
 
 macros.SHOW_SITES = True
+macros.VERBOSE = True
 
 # Function to clear input buffer
 def clear_input_buffer():
@@ -369,7 +370,9 @@ def collect_human_trajectory(
         env_action = np.concatenate(env_action)
 
         # Run environment step
-        obs, _, _, _ = env.step(env_action, action_dict=deepcopy(action_dict))
+        obs, reward, done, info = env.step(
+            env_action, action_dict=deepcopy(action_dict)
+        )
         collected_steps += 1
         if not is_empty_input_spacemouse(
             action_dict
@@ -401,9 +404,9 @@ def collect_human_trajectory(
             print("Max steps reached!!!! Good job.")
             break
 
-        # with open("/home/soroushn/tmp/model.xml", "w") as f:
-        #     f.write(env.model.get_xml())
-        # exit()
+        if done and (not env._check_success()):
+            print(colored("Task failed at step {}".format(collected_steps), "red"))
+            break
 
     if nonzero_ac_seen and hasattr(env, "ep_directory"):
         ep_directory = env.ep_directory
@@ -813,6 +816,9 @@ if __name__ == "__main__":
             ep_meta["style_ids"] = args.style
             ep_meta["style_id"] = args.style[0]
         config["ep_meta"] = ep_meta
+    print(f"{config['style_ids']=}")
+    print(f"{config['layout_ids']=}")
+    # exit()
 
     # Create environment
     env = robosuite.make(
