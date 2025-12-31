@@ -1,17 +1,11 @@
-import os
-from re import S
 import numpy as np
 
 from robocasa.environments.kitchen.kitchen import *
 import robocasa.utils.object_utils as OU
 import robocasa.macros as macros
 from robocasa.models.fixtures import *
-from termcolor import colored
 
-# from robocasa.models.objects.kitchen_objects import OBJ_COOK_TIMINGS
 import robocasa.models.objects.kitchen_objects as kobject
-
-macros.SHOW_SITES = True
 
 
 class MultiTaskBase(Kitchen):
@@ -325,7 +319,6 @@ class MemHeatPot(MultiTaskBase):
         Returns the location of the burner if the object is on the stove, close to a burner, and the burner is on.
         None otherwise.
         """
-        # TODO: make sure only one stove is detected or the one with least distance is selected and less than threshold
         knobs_state = self.stove.get_knobs_state(env=self)
         obj = self.objects[obj_name]
         obj_pos = np.array(self.sim.data.body_xpos[self.obj_body_id[obj.name]])[0:2]
@@ -345,10 +338,7 @@ class MemHeatPot(MultiTaskBase):
         else:
             if macros.VERBOSE:
                 print(
-                    colored(
-                        f"Closest knob is {location} but dist is {dist:.3f} which is greater than threshold {threshold:.2f}",
-                        "red",
-                    )
+                    f"Closest knob is {location} but dist is {dist:.3f} which is greater than threshold {threshold:.2f}"
                 )
         return None
 
