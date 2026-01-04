@@ -129,7 +129,7 @@ def replay_episode(
             time.sleep(0.05)  # Small delay for visualization
 
         # Step the environment
-        if args.state_replay:
+        if args.replay_state:
             state = {
                 "states": states[i],
             }
@@ -194,10 +194,16 @@ def main():
         help="Whether to return camera observations",
     )
     parser.add_argument(
-        "--state_replay",
+        "--replay_state",
         action="store_true",
         default=False,
         help="Whether to replay the state of the environment",
+    )
+    parser.add_argument(
+        "--save_success",
+        action="store_true",
+        default=False,
+        help="Save the successful episodes to a new HDF5 file",
     )
     parser.add_argument("--reset_mode", type=str, default=None, help="Reset mode")
     args = parser.parse_args()
@@ -243,7 +249,7 @@ def main():
     # Replay episodes
     success_count = 0
     total_episodes = min(args.max_episodes, len(ep_names))
-
+    success_ep_names = []
     for i in range(total_episodes):
         ep_idx = (args.episode_idx + i) % len(ep_names)
         ep_name = ep_names[ep_idx]
@@ -252,10 +258,45 @@ def main():
         print(colored(f"Episode {i+1}/{total_episodes}: {ep_name}", "cyan"))
         print(colored(f"{'='*50}", "cyan"))
 
-        replay_episode(env, hdf5_path, ep_name, env_args_obj, args)
+        is_success = replay_episode(env, hdf5_path, ep_name, env_args_obj, args)
+        if is_success:
+            success_ep_names.append(ep_name)
+        #     break
 
     # Print summary
     print(colored(f"\n{'='*50}", "cyan"))
+
+    if args.save_success:
+        print(
+            colored(
+                f"Storing successful episodes to: {args.hdf5_path.replace('.hdf5', '_success.hdf5')}",
+                "yellow",
+            )
+        )
+        with h5py.File(args.hdf5_path.replace(".hdf5", "_success.hdf5"), "w") as f:
+            f.create_group("data")
+            # copy all the attributes from the original group to the new group
+            for key, value in h5py.File(hdf5_path, "r").attrs.items():
+                f.attrs[key] = value
+            for ep_name in success_ep_names:
+                ep_group = h5py.File(hdf5_path, "r")["data"][ep_name]
+                f["data"].create_group(ep_name)
+                # copy all the attributes from the original group to the new group
+                for key, value in ep_group.attrs.items():
+                    f["data"][ep_name].attrs[key] = value
+                for key, value in ep_group.items():
+                    if isinstance(value, h5py.Group):
+                        f["data"][ep_name].create_group(key)
+                        # copy all the attributes from the original group to the new group
+                        for key, value in value.attrs.items():
+                            f["data"][ep_name][key].attrs[key] = value
+                    else:
+                        f["data"][ep_name].create_dataset(key, data=value)
+
+    print(colored(f"Success rate: {len(success_ep_names)}/{total_episodes}", "green"))
+    print(
+        colored(f"Success rate: {len(success_ep_names)}/{total_episodes:.4f}", "green")
+    )
 
 
 if __name__ == "__main__":
