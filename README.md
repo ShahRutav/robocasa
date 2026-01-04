@@ -1,14 +1,26 @@
-# RoboCasa: Large-Scale Simulation of Everyday Tasks for Generalist Robots
+# ReMemBench: Scaling Short-Term Memory of Visuomotor Policies for Long-Horizon Tasks
 <!-- ![alt text](https://github.com/UT-Austin-RPL/maple/blob/web/src/overview.png) -->
-<img src="docs/images/robocasa-banner.jpg" width="100%" />
+<img src="docs/images/remembench-banner.png" width="100%" />
 
-This is the official codebase of RoboCasa, a large-scale simulation framework for training generally capable robots to perform everyday tasks. This guide contains information about installation and setup. Please refer to the following resources for additional information:
+This is the official codebase of [ReMemBench](https://TODO.ai), built upon [RoboCasa](https://robocasa.ai/), a benchmark for training and evaluating visuomotor policies with short-term memory. This guide contains information about installation and setup.
 
-[**[Home page]**](https://robocasa.ai) &ensp; [**[Documentation]**](https://robocasa.ai/docs/introduction/overview.html) &ensp; [**[Paper]**](https://robocasa.ai/assets/robocasa_rss24.pdf)
-
+[**[Home page]**](https://TODO.ai) &ensp; [**[Paper]**](https://TODO.ai)
 -------
-## Latest updates
-* [10/31/2024] **v0.2**: using RoboSuite `v1.5` as the backend, with improved support for custom robot composition, composite controllers, more teleoperation devices, photo-realistic rendering.
+
+### Task Categories
+
+Tasks are organized by memory type. Each task is provided with 50 expert demonstrations for training.
+
+| Task Name | Memory Category | Task Variants |
+|-----------|----------------|---------------|
+| **Retrieve Fruit**<br/>A fruit is placed somewhere in the kitchen and is out of view from a neutral start. The robot must remember its location, fetch it, and place it in the sink. | **Spatial Memory**<br/>*Recall object locations* | `MemFruitInSinkLeftFar`<br/>`MemFruitInSinkRightFar` |
+| **Retrieve Oil**<br/>Several household items are arranged and not visible from the start. The robot must find the specified oil bottle and pick it up. | **Spatial Memory**<br/>*Recall object locations* | `MemRetrieveOilsFromCounterLL`<br/>`MemRetrieveOilsFromCounterLR`<br/>`MemRetrieveOilsFromCounterRL`<br/>`MemRetrieveOilsFromCounterRR` |
+| **Cook Meat**<br/>A pan with meat sits on the stove. The robot must turn the stove on, wait the required duration, then turn it off. | **Prospective Memory**<br/>*Retain intentions over delay* | `MemHeatPot` |
+| **Cook Meat and Vegetable**<br/>Meat begins on the stove, and a vegetable is nearby. The robot must turn the stove on, add the vegetable after a specified duration, and turn the stove off after another specified duration so both items meet their cooking times. | **Prospective Memory**<br/>*Retain intentions over delay* | `MemHeatPotMultiple` |
+| **Wash and Return to Container**<br/>Two saucers sit to the left and right of the sink; one holds a fruit. The robot must wash the fruit and return it to the same saucer. | **Object-Associative Memory**<br/>*Recall object-location associations* | `MemWashAndReturnLeft`<br/>`MemWashAndReturnRight` |
+| **Wash and Return to Original Spot**<br/>A fruit starts on the countertop. The robot must move it to the sink to wash it, and place it back at its original location (within a small window). | **Object-Associative Memory**<br/>*Recall object-location associations* | `MemWashAndReturnSameLocation` |
+| **Microwave Breadsticks**<br/>A plate holds multiple breadsticks, and the microwave is initially out of view. The robot must move all breadsticks into the microwave, close the door, and keep track of how many remain. | **Object-Set Memory**<br/>*Maintain and update sets of objects* | `MemPutKBreadInMicrowave` |
+| **Relocate Bowls**<br/>Bowls with distractor plates nearby sit beside a cabinet. The robot must transfer all and only the bowls into the cabinet while tracking the remaining count. | **Object-Set Memory**<br/>*Maintain and update sets of objects* | `MemPutKBowlInCabinet` |
 
 -------
 ## Installation
@@ -20,12 +32,12 @@ RoboCasa works across all major computing platforms. The easiest way to set up i
    ```
 2. Activate conda environment:
    ```sh
-   conda activate robocasa
+   conda activate memory 
    ```
 3. Clone and setup robosuite dependency (**important: use the master branch!**):
 
    ```sh
-   git clone https://github.com/ARISE-Initiative/robosuite
+   git clone --branch=abs_robot https://github.com/ShahRutav/robosuite
    cd robosuite
    pip install -e .
    ```
@@ -33,7 +45,7 @@ RoboCasa works across all major computing platforms. The easiest way to set up i
 
    ```sh
    cd ..
-   git clone https://github.com/robocasa/robocasa
+   git clone --branch=cleanup https://github.com/ShahRutav/robocasa
    cd robocasa
    pip install -e .
    pip install pre-commit; pre-commit install           # Optional: set up code formatter.
@@ -47,46 +59,132 @@ RoboCasa works across all major computing platforms. The easiest way to set up i
    ```
 
 -------
-## Quick start
-**(Mac users: for these scripts, prepend the "python" command with "mj": `mjpython ...`)**
+## Dataset Overview
 
-### Explore kitchen layouts and styles
-Explore kitchen layouts (G-shaped, U-shaped, etc) and kitchen styles (mediterranean, industrial, etc):
-```
-python -m robocasa.demos.demo_kitchen_scenes
-```
+The memory dataset is provided at `Rutav/ReMemBench-Dataset` and contains expert teleoperated demonstrations for various manipulation tasks.
 
-### Play back sample demonstrations of tasks
-Select a task and play back a sample demonstration for the selected task:
+## Data Downloading 
 ```
-python -m robocasa.demos.demo_tasks
+huggingface-cli download Rutav/ReMemBench-Dataset \
+  --repo-type dataset \
+  --local-dir ReMemBench-Dataset \
+  --local-dir-use-symlinks False
 ```
 
-### Explore library of 2500+ objects
-View and interact with both human-designed and AI-generated objects:
-```
-python -m robocasa.demos.demo_objects
-```
-Note: by default this demo shows objaverse objects. To view AI-generated objects, add the flag `--obj_types aigen`.
+### File Structure
 
-### Teleoperate the robot
-Control the robot directly, either through a keyboard controller or spacemouse. This script renders the robot semi-translucent in order to minimize occlusions and enable better visibility.
+The dataset is organized by task name, with each task containing one or more demonstration sessions:
+
 ```
-python -m robocasa.demos.demo_teleop
+ReMemBench-Dataset/
+├── MemFruitInSinkLeftFar/
+├── MemFruitInSinkRightFar/
+├── MemHeatPot/
+│   ├── 2025-07-24-22-26-20/
+│   │   ├── demo.hdf5
+│   │   └── demo_im128.hdf5  # Image version
+├── MemHeatPotMultiple/
+├── MemPutKBowlInCabinet/
+├── MemPutKBreadInMicrowave/
+├── MemRetrieveOilsFromCounterLL/
+├── MemRetrieveOilsFromCounterLR/
+├── MemRetrieveOilsFromCounterRL/
+├── MemRetrieveOilsFromCounterRR/
+├── MemWashAndReturnLeft/
+├── MemWashAndReturnRight/
+├── MemWashAndReturnSameLocation/
+└── task_embeds_clip_v3.pickle
 ```
-Note: If using spacemouse: you may need to modify the product ID to your appropriate model, setting `SPACEMOUSE_PRODUCT_ID` in `robocasa/macros_private.py`.
+
+### HDF5 File Structure
+
+Each session directory contains:
+- **`demo.hdf5`**: Standard demonstration file with original state information (no images)
+- **`demo_im128.hdf5`**: Image version with 128x128 RGB images
+
+#### demo_im128.hdf5 Structure
+
+Below is the dataset structure of hdf5 file provided:
+
+```
+demo_im128.hdf5
+└── data (group)
+    └── [TaskName]_[Robot]_demo_1 (group)
+    │   ├── actions (dataset) - shape: (T, 12)
+    │   │   └── Action: [7 dimensions for arm, 4 dimensions for base, 1 dimension for arm / base mode]
+    │   ├── action_dict (group) - structured action components
+    │   ├── obs (group) - observations with images
+    │   │   ├── robot0_joint_pos_cos - shape: (T, 7) - joint position cosine encoding
+    │   │   ├── robot0_joint_pos_sin - shape: (T, 7) - joint position sine encoding
+    │   │   ├── robot0_gripper_qpos - shape: (T, 2) - gripper position
+    │   │   ├── robot0_agentview_center_image - shape: (T, 128, 128, 3) - RGB camera view
+    │   │   ├── robot0_eye_in_hand_image - shape: (T, 128, 128, 3) - eye-in-hand camera view
+    │   │   └── [other state information]
+    │   ├── states (dataset) - MuJoCo states
+    │   ├── dones (dataset) - episode termination flags
+    │   ├── rewards (dataset) - reward signals
+    │   └── policy_mode (dataset: 1 is )
+    └── [TaskName]_[Robot]_demo_1 (group)
+    └── ...
+```
+
+**Key Observation Fields:**
+- **Joint States**: `robot0_joint_pos_cos` (T, 7) and `robot0_joint_pos_sin` (T, 7) - 7-DOF joint positions encoded as cosine/sine pairs
+- **Gripper State**: `robot0_gripper_qpos` (T, 2) - gripper position for both fingers
+- **Images**: 
+  - `robot0_agentview_center_image` (T, 128, 128, 3) - third-person camera view
+  - `robot0_eye_in_hand_image` (T, 128, 128, 3) - first-person camera view from gripper
 
 -------
-## Tasks, datasets, policy learning, and additional use cases
-Please refer to the [documentation page](https://robocasa.ai/docs/introduction/overview.html) for information about tasks and assets, downloading datasets, policy learning, API docs, and more.
- 
+## Exploring the Data
+
+Replay and visualize demonstrations using the `replay_dataset.py` script:
+
+```bash
+python robocasa/scripts/replay_dataset.py \
+  --hdf5_path ReMemBench-Dataset/MemHeatPot/2025-07-24-22-26-20/demo_im128.hdf5 \
+  --episode_idx 0 \
+  --render
+```
+
+Common options: `--max_episodes`, `--replay_state`. See `--help` for full usage.
+
+-------
+## Converting to LeRobot Dataset Format
+
+We did not use [lerobot](https://github.com/huggingface/lerobot) dataset format. However, we provide the conversion script for convenience.
+
+Convert an existing dataset (with image keys) to LeRobot format:
+
+```bash
+python robocasa/scripts/port_to_lerobot.py \
+  --dataset_path ReMemBench-Dataset/MemHeatPot/2025-07-24-22-26-20/demo_im128.hdf5 \
+  --repo_name your_hf_username/MemHeatPot
+```
+
+Convert multiple datasets into one dataset:
+
+```bash
+python robocasa/scripts/port_to_lerobot.py \
+  --dataset_path \
+    ReMemBench-Dataset/MemHeatPot/2025-07-24-22-26-20/demo_im128.hdf5 \
+    ReMemBench-Dataset/MemHeatPot/2025-07-24-22-30-15/demo_im128.hdf5 \
+    ReMemBench-Dataset/MemHeatPot/2025-07-24-22-35-10/demo_im128.hdf5 \
+  --repo_name your_hf_username/MemHeatPot
+```
+
+Or use a glob pattern to find all demo_im128.hdf5 files:
+
+```bash
+python robocasa/scripts/port_to_lerobot.py \
+  --dataset_path $(find ReMemBench-Dataset/MemHeatPot -name "demo_im128.hdf5") \
+  --repo_name your_hf_username/MemHeatPot
+```
+
+To push to Hugging Face Hub, add `--push_to_hub`. See `--help` for all options.
+
 -------
 ## Citation
 ```bibtex
-@inproceedings{robocasa2024,
-  title={RoboCasa: Large-Scale Simulation of Everyday Tasks for Generalist Robots},
-  author={Soroush Nasiriany and Abhiram Maddukuri and Lance Zhang and Adeet Parikh and Aaron Lo and Abhishek Joshi and Ajay Mandlekar and Yuke Zhu},
-  booktitle={Robotics: Science and Systems},
-  year={2024}
-}
+TODO: Add arXiv citation
 ```
