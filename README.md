@@ -13,14 +13,14 @@ Tasks are organized by memory type. Each task is provided with 50 expert demonst
 
 | Task Name | Memory Category | Task Variants |
 |-----------|----------------|---------------|
-| **Retrieve Fruit**<br/>A fruit is placed somewhere in the kitchen and is out of view from a neutral start. The robot must remember its location, fetch it, and place it in the sink. | **Spatial Memory**<br/>*Recall object locations* | `MemFruitInSinkLeftFar`<br/>`MemFruitInSinkRightFar` |
-| **Retrieve Oil**<br/>Several household items are arranged and not visible from the start. The robot must find the specified oil bottle and pick it up. | **Spatial Memory**<br/>*Recall object locations* | `MemRetrieveOilsFromCounterLL`<br/>`MemRetrieveOilsFromCounterLR`<br/>`MemRetrieveOilsFromCounterRL`<br/>`MemRetrieveOilsFromCounterRR` |
-| **Cook Meat**<br/>A pan with meat sits on the stove. The robot must turn the stove on, wait the required duration, then turn it off. | **Prospective Memory**<br/>*Retain intentions over delay* | `MemHeatPot` |
-| **Cook Meat and Vegetable**<br/>Meat begins on the stove, and a vegetable is nearby. The robot must turn the stove on, add the vegetable after a specified duration, and turn the stove off after another specified duration so both items meet their cooking times. | **Prospective Memory**<br/>*Retain intentions over delay* | `MemHeatPotMultiple` |
-| **Wash and Return to Container**<br/>Two saucers sit to the left and right of the sink; one holds a fruit. The robot must wash the fruit and return it to the same saucer. | **Object-Associative Memory**<br/>*Recall object-location associations* | `MemWashAndReturnLeft`<br/>`MemWashAndReturnRight` |
-| **Wash and Return to Original Spot**<br/>A fruit starts on the countertop. The robot must move it to the sink to wash it, and place it back at its original location (within a small window). | **Object-Associative Memory**<br/>*Recall object-location associations* | `MemWashAndReturnSameLocation` |
-| **Microwave Breadsticks**<br/>A plate holds multiple breadsticks, and the microwave is initially out of view. The robot must move all breadsticks into the microwave, close the door, and keep track of how many remain. | **Object-Set Memory**<br/>*Maintain and update sets of objects* | `MemPutKBreadInMicrowave` |
-| **Relocate Bowls**<br/>Bowls with distractor plates nearby sit beside a cabinet. The robot must transfer all and only the bowls into the cabinet while tracking the remaining count. | **Object-Set Memory**<br/>*Maintain and update sets of objects* | `MemPutKBowlInCabinet` |
+| **Retrieve Fruit**<br/>Remember fruit location (out of view). Varies: fruit type, placement position | **Spatial Memory**<br/>*Recall object locations* | `MemFruitInSinkLeftFar`<br/>`MemFruitInSinkRightFar` |
+| **Retrieve Oil**<br/>Remember oil bottle location among distractors. Varies: bottle instance, counter position | **Spatial Memory**<br/>*Recall object locations* | `MemRetrieveOilsFromCounterLL`<br/>`MemRetrieveOilsFromCounterLR`<br/>`MemRetrieveOilsFromCounterRL`<br/>`MemRetrieveOilsFromCounterRR` |
+| **Cook Meat**<br/>Remember cooking duration while waiting. Varies: duration, pan type, meat type | **Prospective Memory**<br/>*Retain intentions over delay* | `MemHeatPot` |
+| **Cook Meat and Vegetable**<br/>Remember multiple timed actions (add vegetable, turn off). Varies: durations, pan/ingredient types, vegetable location | **Prospective Memory**<br/>*Retain intentions over delay* | `MemHeatPotMultiple` |
+| **Wash and Return to Container**<br/>Remember which saucer (left/right) the fruit came from. Varies: fruit type, saucer type, side | **Object-Associative Memory**<br/>*Recall object-location associations* | `MemWashAndReturnLeft`<br/>`MemWashAndReturnRight` |
+| **Wash and Return to Original Spot**<br/>Remember original countertop location. Varies: initial position, fruit type | **Object-Associative Memory**<br/>*Recall object-location associations* | `MemWashAndReturnSameLocation` |
+| **Microwave Breadsticks**<br/>Remember count of breadsticks moved. Varies: count, bread type, positions | **Object-Set Memory**<br/>*Maintain and update sets of objects* | `MemPutKBreadInMicrowave` |
+| **Relocate Bowls**<br/>Remember count of bowls among distractor plates. Varies: bowl types, counts, positions | **Object-Set Memory**<br/>*Maintain and update sets of objects* | `MemPutKBowlInCabinet` |
 
 -------
 ## Installation
