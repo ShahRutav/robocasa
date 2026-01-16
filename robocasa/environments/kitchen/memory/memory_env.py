@@ -298,7 +298,6 @@ class MemHeatPot(MultiTaskBase):
         knobs_state = self.stove.get_knobs_state(env=self)
         obj = self.objects[obj_name]
         obj_pos = np.array(self.sim.data.body_xpos[self.obj_body_id[obj.name]])[0:2]
-        print("*" * 20)
         location_dist_list = []
         for location, site in self.stove.burner_sites.items():
             if site is not None:
@@ -313,12 +312,13 @@ class MemHeatPot(MultiTaskBase):
         if obj_on_site:
             return location
         else:
-            print(
-                colored(
-                    f"Closest knob is {location} but dist is {dist:.3f} which is greater than threshold {threshold:.2f}",
-                    "red",
+            if macros.VERBOSE:
+                print(
+                    colored(
+                        f"Closest knob is {location} but dist is {dist:.3f} which is greater than threshold {threshold:.2f}",
+                        "red",
+                    )
                 )
-            )
         return None
 
     def _get_obj_cfgs(self):
@@ -359,16 +359,18 @@ class MemHeatPot(MultiTaskBase):
         is_stove_on = self._check_stove_on(self.knob)
         if not self.turn_on_stove_success:  # we have not turned on the stove yet
             if is_stove_on:
-                print("*" * 100)
-                print("stove turned on")
+                if macros.VERBOSE:
+                    print("*" * 100)
+                    print("stove turned on")
                 self.turn_on_stove_success = True
                 self.stove_wait_timer = 0
         elif is_stove_on:  # we have turned on the stove and it is still on
             self.count_empty_actions = True
             self.stove_wait_timer += 1
-            print(
-                f"stove wait timer: {self.stove_wait_timer}/{self.stove_wait_timer_threshold}"
-            )
+            if macros.VERBOSE:
+                print(
+                    f"stove wait timer: {self.stove_wait_timer}/{self.stove_wait_timer_threshold}"
+                )
 
         # we know that the stove is on, and we have waited for a while but not too much, so we can turn it off
         if (
@@ -499,8 +501,9 @@ class MemHeatPotMultiple(MultiTaskBase):
         is_stove_on = self._check_stove_on(self.knob)
         if not self.turn_on_stove_success:  # we have not turned on the stove yet
             if is_stove_on:  # check if just turned it on
-                print("*" * 100)
-                print("stove turned on")
+                if macros.VERBOSE:
+                    print("*" * 100)
+                    print("stove turned on")
                 self.turn_on_stove_success = True
                 self.stove_wait_timer = 0  # start the timer for the meat
         elif is_stove_on:  # we have turned on the stove and it is still on
@@ -508,13 +511,15 @@ class MemHeatPotMultiple(MultiTaskBase):
             self.stove_wait_timer += 1
             if macros.SHOW_SITES:
                 if not self.veggie_add_success:
-                    print(
-                        f"veggie timer: {self.stove_wait_timer}/{self.veggie_add_time_threshold}; stove timer: {self.stove_wait_timer}/{self.stove_wait_timer_max_threshold}"
-                    )
+                    if macros.VERBOSE:
+                        print(
+                            f"veggie timer: {self.stove_wait_timer}/{self.veggie_add_time_threshold}; stove timer: {self.stove_wait_timer}/{self.stove_wait_timer_max_threshold}"
+                        )
                 else:
-                    print(
-                        f"stove timer: {self.stove_wait_timer}/{self.stove_wait_timer_threshold}"
-                    )
+                    if macros.VERBOSE:
+                        print(
+                            f"stove timer: {self.stove_wait_timer}/{self.stove_wait_timer_threshold}"
+                        )
 
         # if stove is on and the veggie add timer is within the threshold
         self._update_veggie_add_time()
