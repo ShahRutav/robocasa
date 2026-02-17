@@ -45,7 +45,7 @@ RoboCasa works across all major computing platforms. The easiest way to set up i
 
    ```sh
    cd ..
-   git clone --branch=cleanup https://github.com/ShahRutav/robocasa
+   git clone --branch=release https://github.com/ShahRutav/robocasa
    cd robocasa
    pip install -e .
    pip install pre-commit; pre-commit install           # Optional: set up code formatter.
